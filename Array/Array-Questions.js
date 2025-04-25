@@ -481,7 +481,108 @@ minSubArrayLen(15, [1,2,3,4,5]) // 5 */
 //----------------------------------------------------------------------------------------
 // sort array converting elements square
 
-function sortArrElementSquare(arr) {
+// function sortArrElementSquare(arr) {
+//    for (let i = 0; i < arr.length; i++) {
+//       arr[i] *= arr[i];
+//    }
 
+//    console.warn("🚀 ~ sortArrElementSquare ~ arr:", arr.sort((a, b) => a - b))
+// }
+// sortArrElementSquare([-6, -3, -1, 2, 4, 5]) // [1, 4 , 9, 16, 25, 36]
+
+
+//-----------------------------------------------------------------------------------------
+
+//  Two Sum II - Input Array Is Sorted
+
+// var twoSum = function (numbers, target) {
+//    let left = 0;
+
+//    let currSum = 0;
+//    for (let right = numbers.length - 1; right !== left;) {
+//        currSum = 0;
+//        //if (numbers[right] > target) continue;
+//        currSum = numbers[left] + numbers[right];
+//        console.log(currSum)
+//        if (currSum === target) return [left + 1, right + 1];
+//        if (currSum < target) {
+//            left++;
+//        } else {
+//            right--
+//        }
+//    }
+//    return []
+// };
+
+// console.log(twoSum([2,7,11,15], 9)) // [1, 2]
+// console.log(twoSum([2,3,4], 6)) // [1, 3]
+
+//-----------------------------------------------------------------------------------------------
+
+// 11. Container With Most Water
+
+// var maxArea = function (height) {
+//    let left = 0;
+//    let right = height.length - 1;
+
+//    let maxWater = 0
+
+//    while (left < right) {
+//        const width = right - left;
+//        const area = Math.min(height[left], height[right]) * width;
+//        maxWater = Math.max(maxWater, area)
+
+//        if (height[left] > height[right]) {
+//            right--
+//        } else {
+//            left++
+//        }
+//    }
+//   // console.log(maxWater)
+
+//    return maxWater;
+
+// };
+
+// maxArea([1,8,6,2,5,4,8,3,7]) // 49
+// maxArea([1,1]) // 1
+
+//------------------------------------------------------------------------------------------
+
+// Maximum consecutive one’s (or zeros) in a binary circular array
+
+function maxConsecutiveOnesCircular(arr) {
+   // maxInMiddle count
+   let maxInMiddle = 0;
+   let current = 0;
+   for (let i = 0; i < arr.length; i++) {
+      if (arr[i] === 1) {
+         current++;
+         maxInMiddle = Math.max(maxInMiddle, current);
+      } else {
+         current = 0;
+      }
+   }
+   console.log(maxInMiddle)
+
+   // Count 1s from the beginning until we hit a 0.
+   let prefix = 0;
+   for (let i = 0; i < arr.length; i++) {
+      if (arr[i] === 0) break;
+      prefix++;
+   }
+   console.warn("🚀 ~ maxConsecutiveOnesCircular ~ prefix:", prefix)
+
+   // Count 1s from the end until we hit a 0.
+   let suffix = 0;
+   for (let i = arr.length -1; i >= 0; i--) {
+      if (arr[i] === 0) break;
+      suffix++;
+   }
+      console.warn("🚀 ~ maxConsecutiveOnesCircular ~ suffix:", suffix, Math.max(maxInMiddle, (prefix+suffix)))
+
+   return Math.max(maxInMiddle, (prefix+suffix))
+   
 }
-sortArrElementSquare([-6, -3, -1, 2, 4, 5]) // [1, 4 , 9, 16, 25, 36]
+
+maxConsecutiveOnesCircular([1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1]) // 6

@@ -76,6 +76,7 @@
 // lengthOfLastWord("   ") // 0
 
 //------------------------------------------------------------------------------------------
+//14. Longest Common Prefix
 
 /* var longestCommonPrefix = function (strs) {
     let sortedArr  = strs.sort();
