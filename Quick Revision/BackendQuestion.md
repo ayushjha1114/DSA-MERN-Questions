@@ -1,31 +1,28 @@
 # Handling Multiple Requests
 
-Here’s a breakdown of how it can handle it, and what you should be careful about:
+## 🏗️ How Node.js Handles Multiple Large Requests (e.g., 100MB CSV Uploads)
 
-🧠 By Default: Node.js Server Behavior
-Node.js can handle many concurrent requests thanks to its non-blocking I/O.
+Node.js uses non-blocking I/O for high concurrency, but large files or CPU-heavy tasks need special handling.
 
-But CPU-heavy or memory-heavy tasks, like parsing a 100MB CSV, can block the event loop, delaying other requests.
+### 🚦 Default Node.js Behavior
 
-😬 What Can Go Wrong?
-If you directly read and parse a 100MB CSV file synchronously or in one big chunk:
+- Node.js can handle many requests concurrently, but **CPU- or memory-intensive operations** (like parsing a 100MB CSV) can block the event loop.
+- Blocking the event loop delays or times out other requests.
+- High memory usage can crash the server.
 
-🛑 You’ll block the event loop.
+### ⚠️ What Can Go Wrong?
 
-🐌 Other incoming requests get delayed or even time out.
+- **Blocking the event loop:** Synchronous or bulk file operations block all requests.
+- **Slow responses:** Other users experience delays.
+- **Crashes:** Memory spikes can bring down your server.
 
-💥 If memory use spikes, the server might crash under high load.
+### ✅ Best Practices
 
-✅ Best Practices to Handle It
-Stream the CSV file
+#### 1. **Stream Large Files**
 
-Use fs.createReadStream() instead of fs.readFile().
+Process files in chunks to keep memory usage low.
 
-Combine with a CSV parser like csv-parser or fast-csv.
-
-js
-Copy
-Edit
+```javascript
 const fs = require('fs');
 const csv = require('csv-parser');
 
@@ -38,51 +35,56 @@ app.post('/process-csv', (req, res) => {
       res.json({ message: 'File processed', rows: results.length });
     });
 });
-Offload heavy processing to a Worker Thread
+```
 
-Node.js worker_threads module lets you run CPU-bound code in separate threads.
+#### 2. **Offload Heavy Work to Worker Threads**
 
-Use a Job Queue (e.g., Bull, RabbitMQ)
+Use the `worker_threads` module for CPU-bound code.
 
-Offload the request into a job queue.
+#### 3. **Use a Job Queue**
 
-Return a response like “Your file is being processed,” and notify the client later (e.g., via WebSocket or polling).
+Queue heavy jobs (e.g., Bull, RabbitMQ). Respond immediately, notify the client when done (WebSocket, polling, etc.).
 
-Limit concurrency
+#### 4. **Limit Concurrency**
 
-Add rate-limiting or queue requests server-side to avoid overload.
+Rate limit or queue incoming requests to avoid overload.
 
-Scale horizontally
+#### 5. **Scale Horizontally**
 
-Use a load balancer and spawn multiple Node.js instances if you're expecting high concurrency.
+Run multiple Node.js instances behind a load balancer.
 
-🔁 Scenario: What if 50 users upload 100MB at once?
-You must not read all 100MB files into memory at once.
+---
 
-Use streams to keep memory usage low.
+### 🔁 Example: 50 Users Uploading 100MB Files Simultaneously
 
-Add a processing queue or throttle the requests if necessary.
+- **Never load all files into memory at once.**
+- **Always use streams** for uploads.
+- **Throttle or queue** requests to prevent overload.
 
+Following these practices keeps your Node.js server responsive and stable under heavy load.
 
+---
 
 ## 📂 Handling File Uploads with Middleware like Multer
 
 ### ✅ What is Multer?
-Multer is a middleware for handling `multipart/form-data`, primarily used for file uploads in Node.js (especially with Express).
 
-### 🔧 How It Works (Under the Hood)
-1. Form submission (e.g., from an HTML form) sends a `multipart/form-data` request.
-2. Multer parses this stream using a parser like `busboy` or its own implementation.
-3. It buffers the file into memory or stores it directly to disk (depending on configuration).
-4. Populates the `req.file` or `req.files` object for you to access in your route.
+Multer is middleware for handling `multipart/form-data`, mainly for file uploads in Node.js (especially with Express).
+
+### 🔧 How It Works
+
+1. Form submission sends a `multipart/form-data` request.
+2. Multer parses the stream using a parser (like `busboy`).
+3. It buffers the file into memory or stores it on disk (configurable).
+4. Populates `req.file` or `req.files` for your route.
 
 ### 🧪 Basic Setup Example
+
 ```javascript
 const express = require('express');
 const multer = require('multer');
 const app = express();
 
-// Store uploaded file in the 'uploads/' folder
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/');
@@ -95,7 +97,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.post('/upload', upload.single('profilePic'), (req, res) => {
-  console.log(req.file); // file info
+  console.log(req.file);
   res.send('File uploaded!');
 });
 ```
@@ -107,18 +109,21 @@ app.post('/upload', upload.single('profilePic'), (req, res) => {
 | `upload.single('fieldName')`     | Handles single file upload               |
 | `upload.array('photos', 5)`      | Handles multiple files                   |
 | `upload.fields([{ name: 'doc' }, { name: 'photo' }])` | Handles multiple fields |
-| **Memory storage**               | `multer.memoryStorage()` buffers the file into RAM |
+| **Memory storage**               | `multer.memoryStorage()` buffers file in RAM |
 | **Disk storage**                 | Saves file directly to disk              |
 
 ### 🛡️ Common Interview Follow-up Questions
 
 #### 🔹 How do you handle file size limits?
+
 ```javascript
 multer({ limits: { fileSize: 1 * 1024 * 1024 } }) // 1MB
 ```
 
 #### 🔹 How do you validate file types?
+
 Use the `fileFilter` option:
+
 ```javascript
 const upload = multer({
   fileFilter: (req, file, cb) => {
@@ -132,25 +137,21 @@ const upload = multer({
 ```
 
 #### 🔹 Where would you store large files?
+
 - Use cloud storage like **S3** or **GCS** (upload via Multer → pipe to cloud storage).
-- Alternatively, use a signed URL and upload directly from the frontend (avoids Node server load).
+- Or use a signed URL and upload directly from the frontend.
 
+---
 
+### 🔹 What happens if an event handler throws an error?
 
-🔹 What happens if an event handler throws an error?
-Answer:
+If an event handler throws an error inside an EventEmitter and it's not caught, it can crash the Node.js process.
 
-If an event handler throws an error inside an EventEmitter, and the error is not caught, it can crash the Node.js process. Here's a breakdown:
+- By default, EventEmitter does not handle exceptions in listeners.
+- If an exception is thrown and not caught, it can crash the app (uncaught exception).
+- If the error occurs in a listener for the `error` event and there's no `error` listener, Node will terminate the process.
 
-By default, EventEmitter does not handle exceptions in event listeners.
-
-If an exception is thrown and not caught inside a listener, it propagates and can cause the application to crash (uncaught exception).
-
-Special case: if the error occurs in a listener of the error event and there's no listener for error, Node will throw and terminate the process.
-
-js
-Copy
-Edit
+```javascript
 const EventEmitter = require('events');
 const emitter = new EventEmitter();
 
@@ -159,11 +160,11 @@ emitter.on('data', () => {
 });
 
 emitter.emit('data'); // This will crash if not caught
-Best Practice: Always wrap listener logic in try/catch if there's a risk of throwing:
+```
 
-js
-Copy
-Edit
+**Best Practice:** Wrap listener logic in try/catch if there's a risk of throwing:
+
+```javascript
 emitter.on('data', () => {
   try {
     // risky logic
@@ -171,20 +172,20 @@ emitter.on('data', () => {
     console.error('Handled error:', err);
   }
 });
-🔹 Can you build a Pub/Sub system using EventEmitter?
-Answer:
+```
 
-Yes, Node.js's built-in EventEmitter is a simple way to build a basic Publish/Subscribe (Pub/Sub) system.
+---
 
-Publisher emits events (messages).
+### 🔹 Can you build a Pub/Sub system using EventEmitter?
 
-Subscribers register callbacks for those events.
+Yes, Node.js's EventEmitter can be used for a basic Pub/Sub system.
 
-Example:
+- Publisher emits events (messages).
+- Subscribers register callbacks for those events.
 
-js
-Copy
-Edit
+**Example:**
+
+```javascript
 const EventEmitter = require('events');
 const pubsub = new EventEmitter();
 
@@ -200,10 +201,11 @@ pubsub.on('message', (data) => {
 
 // Publisher
 pubsub.emit('message', 'Hello, world!');
-Limitations:
+```
 
-It's in-process only — not distributed across multiple machines.
+**Limitations:**
 
-No support for message persistence or delivery guarantees.
+- In-process only — not distributed.
+- No message persistence or delivery guarantees.
 
-For more robust Pub/Sub, use tools like Redis Pub/Sub, Kafka, RabbitMQ, or NATS.
+For robust Pub/Sub, use Redis Pub/Sub, Kafka, RabbitMQ, or NATS.

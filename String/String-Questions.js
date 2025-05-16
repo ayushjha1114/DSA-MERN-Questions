@@ -309,5 +309,59 @@ arrayJoinTest(N);
 */
 
 
+//----------------------------------------------------------------------------------------------
+// Finding the Longest Substring Without Repeating Characters
+// let str = “geeksforgeeks” // 7 (ksforge)
+// let str = 'abcdefabcbb'// 6  (bcdefa)
+
+// const longStr = (str) => {
+//    const hs = new Set();
+//    let left = 0 
+//    let maxLength = 0
+//    for (let right = 0; right < str.length; right++) {
+//        while(hs.has(str[right])) {
+//            hs.delete(str[left])
+//         left++
+//        }
+//        hs.add(str[right]);
+//            console.log(maxLength, right, left, hs)
+//            maxLength = Math.max(maxLength, right-left +1)
+//    }
+//     return maxLength;
+// }
+
+// console.log(longStr(str))
+
+
+//-----------------------------------------------------------------------------------------------
+
+//  Handling Overlapping Intervals
+
+function mergeIntervals(intervals) {
+    let merged = [intervals[0]]
+    
+    for (let i = 1; i < intervals.length; i++) {
+        let last = merged[merged.length -1]
+        console.log(last)
+        if(last[1] >= intervals[i][0]) {
+            last[1] = Math.max(last[1], intervals[i][1])
+        } else {
+            merged.push(intervals[i])
+        }
+    }
+    return merged;
+}
+
+console.log(mergeIntervals([[1,3], [2,6], [8,10], [9,12]])); // [ [ 1, 6 ], [ 8, 12 ] ]
+console.log(mergeIntervals([[1,4], [2,3]])); // [ [ 1, 4 ] ]
+
+console.log(mergeIntervals([[1,4], [0,4]])); // [ [ 1, 4 ] ]
+
+
+//----------------------------------------------------------------------------------------------
+
+//
+
+
 
 

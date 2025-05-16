@@ -551,38 +551,57 @@ minSubArrayLen(15, [1,2,3,4,5]) // 5 */
 
 // Maximum consecutive one’s (or zeros) in a binary circular array
 
-function maxConsecutiveOnesCircular(arr) {
-   // maxInMiddle count
-   let maxInMiddle = 0;
-   let current = 0;
-   for (let i = 0; i < arr.length; i++) {
-      if (arr[i] === 1) {
-         current++;
-         maxInMiddle = Math.max(maxInMiddle, current);
-      } else {
-         current = 0;
-      }
-   }
-   console.log(maxInMiddle)
+// function maxConsecutiveOnesCircular(arr) {
+//    // maxInMiddle count
+//    let maxInMiddle = 0;
+//    let current = 0;
+//    for (let i = 0; i < arr.length; i++) {
+//       if (arr[i] === 1) {
+//          current++;
+//          maxInMiddle = Math.max(maxInMiddle, current);
+//       } else {
+//          current = 0;
+//       }
+//    }
+//    console.log(maxInMiddle)
 
-   // Count 1s from the beginning until we hit a 0.
-   let prefix = 0;
-   for (let i = 0; i < arr.length; i++) {
-      if (arr[i] === 0) break;
-      prefix++;
-   }
-   console.warn("🚀 ~ maxConsecutiveOnesCircular ~ prefix:", prefix)
+//    // Count 1s from the beginning until we hit a 0.
+//    let prefix = 0;
+//    for (let i = 0; i < arr.length; i++) {
+//       if (arr[i] === 0) break;
+//       prefix++;
+//    }
+//    console.warn("🚀 ~ maxConsecutiveOnesCircular ~ prefix:", prefix)
 
-   // Count 1s from the end until we hit a 0.
-   let suffix = 0;
-   for (let i = arr.length -1; i >= 0; i--) {
-      if (arr[i] === 0) break;
-      suffix++;
-   }
-      console.warn("🚀 ~ maxConsecutiveOnesCircular ~ suffix:", suffix, Math.max(maxInMiddle, (prefix+suffix)))
+//    // Count 1s from the end until we hit a 0.
+//    let suffix = 0;
+//    for (let i = arr.length -1; i >= 0; i--) {
+//       if (arr[i] === 0) break;
+//       suffix++;
+//    }
+//       console.warn("🚀 ~ maxConsecutiveOnesCircular ~ suffix:", suffix, Math.max(maxInMiddle, (prefix+suffix)))
 
-   return Math.max(maxInMiddle, (prefix+suffix))
+//    return Math.max(maxInMiddle, (prefix+suffix))
    
-}
+// }
 
-maxConsecutiveOnesCircular([1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1]) // 6
+// maxConsecutiveOnesCircular([1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1]) // 6
+
+//-----------------------------------------------------------------------------------------
+
+// 74. Search a 2D Matrix
+
+// var searchMatrix = function (matrix, target) {
+//     for (let i = 0; i < matrix.length; i++) {
+//         for (let j = 0; j < matrix[i].length; j++) {
+//             if (matrix[i][j] === target) {
+//                 // console.log(matrix[i][j], target)
+//                 return true;
+
+//             }
+//         }
+//     }
+//     return false;
+// };
+// searchMatrix([[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 50]], 3) // true
+// searchMatrix([[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 50]], 13) // false
