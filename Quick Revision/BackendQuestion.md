@@ -2,7 +2,7 @@
 
 ## 🏗️ How Node.js Handles Multiple Large Requests (e.g., 100MB CSV Uploads)
 
-Node.js uses non-blocking I/O for high concurrency, but large files or CPU-heavy tasks need special handling.
+Node.js uses non-blocking I/O for high concurrency, but large files or CPU-heavy tasks require special handling.
 
 ### 🚦 Default Node.js Behavior
 
@@ -209,3 +209,33 @@ pubsub.emit('message', 'Hello, world!');
 - No message persistence or delivery guarantees.
 
 For robust Pub/Sub, use Redis Pub/Sub, Kafka, RabbitMQ, or NATS.
+
+---
+
+### ▶️ Q3: Express Performance
+
+Let’s say your API endpoint is slow.  
+What are 3 possible reasons for a slow Express route, and how would you troubleshoot?
+
+#### ✅ Stronger Answer
+
+If an Express API is slow, I check for:
+
+**Database Query Bottlenecks**
+- Unindexed fields in MongoDB
+- Unnecessary or repeated queries (N+1 problem)
+- Large data sets returned without pagination
+
+**Inefficient Business Logic**
+- Nested loops, blocking code, or complex filtering in-memory
+- Not using async operations correctly (e.g., missing await, long sync code)
+
+**Middleware or Network Delays**
+- Heavy middlewares like body parsing of large payloads
+- CORS misconfiguration, logging overhead, or throttling
+- Slow downstream services (e.g., 3rd-party APIs)
+
+**How I troubleshoot:**
+- Use tools like `console.time`, Postman response time, or Node.js debug logging
+- Add profiling logs before and after DB calls
+- Use MongoDB Compass or explain plans to analyze query performance

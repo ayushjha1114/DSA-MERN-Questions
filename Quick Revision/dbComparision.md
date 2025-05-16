@@ -82,3 +82,18 @@ Use NoSQL (like MongoDB, Cassandra, DynamoDB) when:
 **Pros:**
 - Fast reads for feed
 - Store post + comments + likes in a single document
+
+
+## 🤔 Choosing PostgreSQL vs MongoDB: Practical Scenarios
+
+### When to Choose **PostgreSQL** (Relational DB)
+
+- **Strong Data Relationships:** Ideal for projects needing multi-level joins, foreign key constraints, or normalized data (e.g., e-commerce with users, orders, payments).
+- **ACID Compliance:** Ensures strict data integrity and reliable transactions.
+- **Advanced Security & Roles:** Mature support for fine-grained permissions, access control, and encryption.
+
+### When to Choose **MongoDB** (NoSQL)
+
+- **Unstructured or Semi-structured Data:** Suited for flexible, evolving data models.
+- **Rapid Development:** Schema-less design enables quick iteration and prototyping.
+- **Nested Documents:** Efficient for storing complex, hierarchical data (e.g., blog comments, real-time analytics).
