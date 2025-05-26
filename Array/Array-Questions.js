@@ -605,3 +605,32 @@ minSubArrayLen(15, [1,2,3,4,5]) // 5 */
 // };
 // searchMatrix([[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 50]], 3) // true
 // searchMatrix([[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 50]], 13) // false
+
+
+//-----------------------------------------------------------------------------------------
+// 56. Merge Intervals
+
+var merge = function (intervals) {
+    if (intervals.length <= 1) return intervals;
+    intervals.sort((a, b) => a[0] - b[0]);
+    let res = []
+    let current = intervals[0]
+    for (let i = 1; i < intervals.length; i++) {
+        let next = intervals[i];
+        if (current[1] >= next[0]) {
+            current[1] = Math.max(current[1], next[1])
+        } else {
+            res.push(current);
+            current = next;
+        }
+    }
+    res.push(current)
+    return res
+};
+
+merge([[1, 3], [2, 6], [8, 10], [15, 18]]) // [[1,6],[8,10],[15,18]]
+merge([[1, 4], [4, 5]]) // [[1,5]]
+merge([[1, 4], [2, 3]]) // [[1,4]]
+// merge([[1, 4], [0, 4]]) // [[0,4]]
+// merge([[1, 4], [2, 3], [5, 6], [7, 8]]) // [[1,4],[5,6],[7,8]]
+// merge([[1, 4], [2, 3], [5, 6], [7, 8], [9, 10]]) // [[1,4],[5,6],[7,8],[9,10]]
