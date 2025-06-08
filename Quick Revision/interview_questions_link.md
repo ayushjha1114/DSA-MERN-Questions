@@ -404,6 +404,10 @@ Install dompurify in js to sanitize the input text to prevent XSS attacks
 How hash map function like get set has - have O(1) time complexity
 
 
+### Difference between REST API vs GraphQL
+https://aws.amazon.com/compare/the-difference-between-graphql-and-rest/
+
+
 
 
 

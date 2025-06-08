@@ -68,7 +68,7 @@ function backtrack(path) {
 
 // const combine = (n, k) => {
 //     let result = [];
-    
+
 //     function backtrack(start, path) {
 //         if (path.length === k) {
 //         console.log('start, path', start, path)
@@ -76,18 +76,18 @@ function backtrack(path) {
 //             console.log('result', result)
 //             return;
 //         }
-        
+
 //         for (let i = start; i <= n; i++) {
 //             path.push(i);
 //             backtrack(i + 1, path)
 //             path.pop()
 //         }
 //     }
-    
+
 //     backtrack(1, [])
-    
+
 //     console.log('result------------->', result)
-    
+
 //     return result;
 // }
 
@@ -119,14 +119,14 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 
 // const permute = (nums) => {
 //     let result = [];
-    
+
 //     function backtrack(path) {
 //         //console.log('start, path--->', start, path)
 //         if (path.length === nums.length) {
 //             result.push([...path])
 //             return;
 //         }
-        
+
 //         for (let i = 0; i < nums.length; i++) {
 //             // console.log('>>>>>>>>>>>', path.includes(nums[i]), path)
 //            if (path.includes(nums[i])) continue;
@@ -135,7 +135,7 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 //             path.pop();
 //         }
 //     }
-    
+
 //     backtrack([])
 //     console.log(result)
 //     return result;
@@ -186,38 +186,38 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 // function wordSearch(board, word) {
 //     const rows = board.length;
 //     const cols = board[0].length;
-    
+
 //     function backtrack(row, col, index) {
 //         console.log('col, row, index',  row,col, index, word[index])
 //         if (index === word.length) return true;
-        
-        
+
+
 //         //check for boundaries and character match
 //         if (row < 0 || row >= rows || // check for row out of bound
 //             col < 0 || col >= cols || // check for col out of bound
 //             board[row][col] !== word[index]) // check for character match
 //         return false;
-        
+
 //         const temp = board[row][col];
 //         board[row][col] = '#'
-        
-        
-        
+
+
+
 //         // explore neighbours up down left right
 //         const found  = backtrack(row+1, col, index+1) ||
 //                        backtrack(row-1, col, index+1) ||
 //                        backtrack(row, col+1, index+1) ||
 //                        backtrack(row, col-1, index+1);
-                       
+
 //         //restore its original value
 //         board[row][col] = temp;
-                       
+
 //         console.log(board)
 //         console.log('found',found)
 //         return found;
-    
+
 //     }
-    
+
 //     for (let i = 0; i < rows; i++) {
 //         for (let j = 0; j < cols; j++) {
 //             if (backtrack(i, j, 0)) {
@@ -225,7 +225,7 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 //             }
 //         }
 //     }
-    
+
 //     return false;
 // }
 
@@ -245,7 +245,7 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 //     let left = 0;
 //     let right = matrix[0].length-1;
 //     let bottom = matrix.length-1;
-    
+
 //     while (top <= bottom && left <= right) {
 //         // print left to right
 //         for (let j = left; j <= right; j++) {
@@ -267,7 +267,7 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 //                 result.push(matrix[bottom][j])
 //             }
 //             bottom--;
-            
+
 //         }
 //         if (left <= right) {
 //             // print bottom to top
@@ -277,7 +277,7 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 //             }
 //             left++;
 //         }
-        
+
 //     }
 //     console.log(result)
 //     return result;
@@ -287,4 +287,8 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 // spiralOrder([[1,2,3,4],[5,6,7,8],[9,10,11,12]]) // [1,2,3,4,8,12,11,10,9,5,6,7]
 // spiralOrder([[1,2,3],[4,5,6]]) // [1,2,3,6,5,4]
 // spiralOrder([[1,2,3]]) // [1,2,3]
+
+
+//-----------------------------------------------------------------------------------------------------
+
 

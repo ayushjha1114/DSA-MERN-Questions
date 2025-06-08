@@ -1065,9 +1065,293 @@ Prevents data loss on crash.
 | Need to pass user identity + claims | SAML or OpenID Connect (on top of OAuth 2.0) |
 
 
-✅ Bonus: What about OpenID Connect?
-OIDC = OAuth 2.0 + identity layer
+### ✅ Bonus: What about OpenID Connect?
+1. OIDC = OAuth 2.0 + identity layer
+2. It fills the authentication gap in OAuth
+3. Returns an id_token (JWT) with user info
 
-It fills the authentication gap in OAuth
 
-Returns an id_token (JWT) with user info
+
+
+## 🔄 Quick Recap: What is Sliding Window?
+
+The **sliding window** technique efficiently processes contiguous sequences (windows) within a larger dataset, usually in O(n) time. It’s ideal for scenarios where you care about recent history or a moving time frame.
+
+---
+
+### ✅ Real-World Use Cases
+
+#### 1. Rate Limiting (Backend, Node.js)
+- **Goal:** Limit API requests per user.
+- **How:** Track request timestamps in a time window (e.g., last 60 seconds) and allow only N requests.
+- **Example:** Sliding window log for 100 requests/user/minute.
+- **Tools:** Custom logic or libraries like `express-rate-limit`.
+
+#### 2. Real-Time Analytics / Metrics
+- **Goal:** Count events (clicks, transactions) in the last X seconds/minutes.
+- **How:** Maintain a queue/array of timestamps, remove old entries as time advances.
+- **Example:** Monitor 95th percentile response time over the last 5 minutes.
+
+#### 3. Infinite Scroll / Paginated View (Frontend, React.js)
+- **Goal:** Render only visible data in a "window" around the viewport.
+- **How:** Use virtualization libraries (`react-window`, `react-virtualized`) to render just what's visible.
+- **Example:** Chat messages, product lists, logs.
+
+#### 4. Media Streaming / Buffering (Frontend)
+- **Goal:** Buffer video/audio data as playback progresses.
+- **How:** Slide the buffer window forward, keeping only the next few seconds of data in memory.
+- **Example:** Video player buffering the next 5 seconds.
+
+#### 5. Search Autocomplete / Debouncing User Input
+- **Goal:** Avoid spamming API as user types.
+- **How:** Debounce input using a time-based sliding window (`setTimeout` + `clearTimeout`).
+- **Example:** Show suggestions only after user pauses typing.
+
+#### 6. Financial or Sensor Data Processing
+- **Goal:** Compute moving averages, min/max over time-series data.
+- **How:** Use a sliding window to efficiently calculate rolling statistics.
+- **Example:** 5-minute moving average using a deque.
+
+---
+
+### 🧰 When to Use Sliding Window
+
+- You care about recent or moving time frames.
+- You want linear-time performance (O(n)).
+- You need stream processing or windowed aggregation.
+
+---
+
+### 🔧 Example: Node.js Rate Limiter
+
+```js
+const requests = {};
+
+function rateLimiter(req, res, next) {
+  const userId = req.user.id;
+  const now = Date.now();
+
+  if (!requests[userId]) requests[userId] = [];
+
+  // Remove timestamps older than 60 seconds
+  requests[userId] = requests[userId].filter(ts => now - ts < 60000);
+
+  if (requests[userId].length >= 100) {
+    return res.status(429).send('Too many requests');
+  }
+
+  requests[userId].push(now);
+  next();
+}
+```
+
+---
+
+### 🧪 Final Thoughts
+
+Sliding window is a practical, real-world technique powering efficient systems—from API rate limiting and analytics to UI rendering and stream processing. It’s a must-have in every full-stack developer’s toolkit.
+
+
+
+
+### Question
+
+> **You have a data stream coming every 5 seconds via WebSocket. You have to display this data on a line chart. Eventually, your app crashes due to memory usage. How would you design and implement a performant solution?**
+
+---
+
+### 🔷 High-Level Design (HLD)
+
+**Objective:**  
+Display a real-time line chart using WebSocket data every 5 seconds, while ensuring performance and avoiding browser memory overflow.
+
+#### 1. Tech Stack
+
+- **React.js** (functional components, hooks)
+- **WebSocket** (persistent connection for data stream)
+- **Recharts** or **Chart.js** (for line chart rendering)
+- **State management:** `useState`, `useRef`, and optionally `useReducer` or Redux
+- **Optional:** Web Workers for data-heavy transformation off the main thread
+
+---
+
+2. Architectural Overview
+
+```
+React App
+│
+├── WebSocket Layer (data ingestion)
+│
+├── Data Buffer (sliding window)
+│
+├── Chart Renderer (LineChart)
+│
+└── UI Controls (Pause, Resume, Export)
+```
+
+---
+
+### 🔍 Low-Level Design (LLD)
+
+#### 1. WebSocket Setup
+
+```js
+useEffect(() => {
+  const socket = new WebSocket("wss://your-server-endpoint");
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (!pausedRef.current) {
+      updateDataBuffer(data);
+    }
+  };
+
+  return () => socket.close();
+}, []);
+```
+
+#### 2. Data Buffering (Sliding Window)
+
+```js
+const MAX_POINTS = 300; // ~25 minutes of data at 5s intervals
+const [dataPoints, setDataPoints] = useState([]);
+
+const updateDataBuffer = (newPoint) => {
+  setDataPoints((prev) => {
+    const updated = [...prev, newPoint];
+    if (updated.length > MAX_POINTS) updated.shift();
+    return updated;
+  });
+};
+```
+### 3. Pause/Resume Control
+
+```js
+const pausedRef = useRef(false);
+
+const togglePause = () => {
+  pausedRef.current = !pausedRef.current;
+};
+```
+
+### 4. Line Chart Rendering
+
+```jsx
+<LineChart width={800} height={400} data={dataPoints}>
+  <XAxis dataKey="timestamp" />
+  <YAxis />
+  <Tooltip />
+  <Line type="monotone" dataKey="value" stroke="#82ca9d" dot={false} />
+</LineChart>
+```
+
+---
+
+### 🧯 Performance and Memory Optimization
+
+**Problem:** Continuous data inflow can cause memory bloat.
+
+### 🛠️ Solutions & Enhancements
+
+| Problem                | Solution                                                         |
+|------------------------|------------------------------------------------------------------|
+| Data keeps growing     | **Sliding window:** Retain only the most recent N data points    |
+| UI stuttering          | Use `React.memo`/`useMemo` to avoid unnecessary re-renders       |
+| Large payloads         | Offload heavy data transformation to **Web Workers**             |
+| Too many re-renders    | **Throttle** data ingestion or chart updates                     |
+| Memory leaks           | Clean up WebSocket on unmount via `useEffect` cleanup            |
+
+#### Optional Enhancements
+
+- **Export CSV:** Add a button to download buffered data as CSV.
+- **Backpressure Handling:** Drop or queue messages if chart rendering lags.
+- **WebSocket Reconnect:** Implement retry logic with exponential backoff.
+- **Downsampling:** Render fewer points visually while preserving the chart's shape.
+
+## ✅ Summary
+“To handle the streaming data every 5 seconds via WebSocket and render it in a line chart, I set up a persistent WebSocket connection and buffer the data in a sliding window of recent points to prevent memory bloat. I use Recharts for rendering and optimize performance using shallow state updates, throttling, and clean WebSocket disconnection. I also provide pause/resume functionality and can offload any heavy work to a Web Worker if needed. This ensures smooth, real-time UX without performance issues even during long sessions.”
+
+
+## Idempotency in Payment APIs
+
+**Idempotency** ensures that multiple identical requests have the same effect as a single request. This is crucial for payment APIs to prevent double-charging users.
+
+### 1. Idempotency Key (Recommended Approach)
+- The client sends a unique `Idempotency-Key` header with each request.
+- The server checks a persistent store (e.g., Redis, Postgres) for this key:
+    - **If found:** Return the previous result (do not re-run the payment logic).
+    - **If not found:** Process the payment, save the result with the key, and return the response.
+- This approach makes retries (e.g., due to network issues) safe and prevents duplicate charges.
+
+### 2. Database Transaction (Additional Safety)
+- Use ACID-compliant transactions (e.g., PostgreSQL, MongoDB sessions) to wrap payment operations.
+- This ensures atomicity (e.g., deduct balance and insert payment record together).
+- However, this alone does not prevent duplicate external requests—combine with an idempotency key for full protection.
+
+### 3. Unique Constraint (Backup)
+- Add a unique field (e.g., `transactionId`) in the database.
+- Prevents duplicate rows even if application logic fails.
+
+---
+
+## Designing a Rate Limiting System for POST /login
+
+To block abuse (e.g., brute force) while maintaining user experience:
+
+### 1. Types of Rate Limits
+- **Per-IP:** Prevents bot abuse.
+- **Per-user/email:** Blocks brute-force attacks.
+- **Global:** Protects infrastructure from overload.
+
+### 2. Where to Store Rate Data
+- **In-memory (App-level):** Fast, but not scalable across multiple instances. Good for prototyping.
+- **Centralized (Distributed):** Use Redis for fast, atomic, and consistent rate limiting across all app instances.
+
+### 3. Implementation Layers
+- **App-level:** Use packages like `express-rate-limit` or `rate-limiter-flexible`.
+- **Infrastructure-level:** Use load balancers or WAFs (e.g., AWS API Gateway, Cloudflare, Nginx) for IP/path-based limits.
+
+### 4. Handling Legitimate vs Malicious Users
+- Use exponential backoff or token bucket algorithms.
+- Allow bursts, throttle on abuse, and consider CAPTCHA/OTP after excessive attempts.
+
+### 5. Global vs Per-user Limits
+- **Global:** Protects the whole system.
+- **Per-user/IP:** Targets individual abuse.
+
+---
+
+## Handling CPU-Bound Work in Node.js
+
+### 1. Offloading Heavy Tasks
+- Use `worker_threads` to move CPU-intensive work off the main thread.
+- For process isolation, use child processes or external services (e.g., AWS Lambda).
+
+### 2. Queueing for High Load
+- Use job queues (e.g., RabbitMQ, Bull) to manage and distribute heavy tasks.
+
+---
+
+## Preventing Thread Exhaustion in worker_threads
+
+### 1. Backpressure and Streams
+- Use Node.js streams for I/O-heavy tasks to prevent memory bloat.
+- Streams handle backpressure automatically.
+
+### 2. Thread Pool Management
+- **Do not spawn unlimited workers.**
+- Use a thread pool manager (e.g., Piscina) to maintain a fixed number of workers and queue extra tasks.
+- Example:
+    ```js
+    const Piscina = require('piscina');
+    const pool = new Piscina({ filename: './worker.js' });
+    await pool.runTask(data); // Queues if pool is busy
+    ```
+
+### 3. Manual Queue + Semaphore
+- Track active workers and only spawn new ones if below a set limit.
+
+**Summary:**  
+- Use streams for I/O with built-in backpressure.
+- Use thread pools or bounded queues for CPU-heavy tasks to avoid memory exhaustion.
+

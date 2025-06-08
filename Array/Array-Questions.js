@@ -368,77 +368,10 @@ minSubArrayLen(11, [1,1,1,1,1,1,1,1]) // 0
 minSubArrayLen(15, [1,2,3,4,5]) // 5 */
 
 
-//--------------------------------------------------------------------------------------------
-
-// Longest Substring Without Repeating Characters
-
-// var lengthOfLongestSubstring = function (s) {
-//    let map = new Map();
-//    let left = 0;
-//    let maxLength = 0;
-
-//    for (let right = 0; right < s.length; right++) {
-//       const char = s[right];
-//       console.warn("🚀 ~ lengthOfLongestSubstring ~ char:", char)
-//       if (map.has(char) && map.get(char) >= left) {
-//          left = map.get(char) + 1; // Move the left pointer to the right of the last occurrence
-//       }
-//       map.set(char, right); // Update the last occurrence of the character
-//       console.warn("🚀 ~ lengthOfLongestSubstring ~ right - left + 1:", right, left, 1)
-//       maxLength = Math.max(maxLength, right - left + 1); // Update the maximum length
-//       // console.warn("🚀 ~ lengthOfLongestSubstring ~ maxLength:", maxLength)
-//    }
-// };
-
-// // lengthOfLongestSubstring("abcabcbb") // 3
-// // lengthOfLongestSubstring("bbbbb") // 1 
-// // lengthOfLongestSubstring("pwwkew") // 3 
-// lengthOfLongestSubstring("dvdf") // 3
-
-
-//--------------------------------------------------------------------------------------------
-// three sum
-
-// function sum3(arr) {
-//    let res = [];
-//    arr.sort((a, b) => a - b); // Sort the array first
-
-//    for (let i = 0; i < arr.length - 2; i++) {
-//       // Skip duplicates for the first number
-//       if (i > 0 && arr[i] === arr[i - 1]) continue;
-
-//       let left = i + 1;
-//       let right = arr.length - 1;
-
-//       while (left < right) {
-//          let sum = arr[i] + arr[left] + arr[right];
-
-//          if (sum === 0) {
-//             res.push([arr[i], arr[left], arr[right]]);
-
-//             // Skip duplicates for left and right
-//             while (arr[left] === arr[left + 1]) left++;
-//             while (arr[right] === arr[right - 1]) right--;
-
-//             left++;
-//             right--;
-//          } else if (sum < 0) {
-//             left++; // Need a larger sum
-//          } else {
-//             right--; // Need a smaller sum
-//          }
-//       }
-//    }
-
-//    console.log(res);
-// }
 
 
 
-// sum3([-1, 0, 1, 2, -1, -4]) // // [[-1, -1, 2], [-1, 0, 1]]
-// sum3([-2, 0, 1, 1, 2]) // [[-2, 1, 1]]
-// sum3([0, 0, 0, 0]) // [[0, 0, 0]]
-// sum3([-1, 0, 1, 2, -1, -4]) // [[-1, -1, 2], [-1, 0, 1]]
+
 
 
 //----------- -----------------------------------------------------------------------------------

@@ -533,6 +533,232 @@ promise
     .finally(() => console.log("Done"));    // runs no matter what
 ```
 
+```js
+// Polyfill for Array.prototype.includes
+
+if (!Array.prototype.myIncludes) {
+    Array.prototype.myIncludes = function (searchElement, fromIndex) {
+        // Uncomment the next line to throw if array is null or undefined
+        // if (this == null) throw new TypeError("this array is null or undefined");
+
+        let arr = this;
+        let length = arr.length;
+
+        if (length === 0) return false;
+
+        let currentIndex = fromIndex | 0;
+
+        while (currentIndex < length) {
+            let current = arr[currentIndex];
+            if (
+                current === searchElement ||
+                (typeof current === 'number' &&
+                    typeof searchElement === 'number' &&
+                    isNaN(current) &&
+                    isNaN(searchElement))
+            ) {
+                return true;
+            }
+            currentIndex++;
+        }
+        return false;
+    };
+}
+
+let arr = [1, 2, 3];
+
+console.log(arr.myIncludes(2)); // true
+```
+
+
+
+# Understanding `call`, `apply`, and `bind` in JavaScript/Node.js
+
+These three methods are used to control the context (`this`) in which a function executes.
+
+---
+
+## 🔹 `call()`
+
+Immediately invokes the function with a given `this` context and arguments provided individually.
+
+```js
+function greet(greeting) {
+    console.log(`${greeting}, my name is ${this.name}`);
+}
+
+const person = { name: "Alice" };
+
+greet.call(person, "Hello"); // Hello, my name is Alice
+```
+
+---
+
+## 🔹 `apply()`
+
+Same as `call()`, but arguments are passed as an array.
+
+```js
+greet.apply(person, ["Hi"]); // Hi, my name is Alice
+```
+
+---
+
+## 🔹 `bind()`
+
+Returns a new function with a bound `this` context. It does **not** execute immediately.
+
+```js
+const boundGreet = greet.bind(person);
+boundGreet("Hey"); // Hey, my name is Alice
+```
+
+---
+
+## 🧠 Mental Model
+
+Think of `this` as the owner of data.
+
+- `call`, `apply`, and `bind` let you borrow functions and control `this`.
+
+---
+
+# Real-World Node.js Examples
+
+## 1. `call()` — Logging Middleware with Custom Context
+
+Imagine a logging utility function you want to reuse with multiple modules.
+
+```js
+function log(level, message) {
+    console.log(`[${level}] [${this.moduleName}]: ${message}`);
+}
+
+const authModule = { moduleName: "Auth" };
+const paymentModule = { moduleName: "Payment" };
+
+log.call(authModule, "INFO", "User login success");
+log.call(paymentModule, "ERROR", "Payment failed");
+```
+
+**Why is this real-world?**
+
+- Centralize logging, but need different module names (`this.moduleName`).
+- Avoid hard-coding context.
+
+---
+
+## 2. `apply()` — Calling with Dynamic Arguments
+
+Suppose you’re building an analytics tracker and receive arguments as an array from an API.
+
+```js
+function track(event, userId, timestamp) {
+    console.log(`[${this.system}] Tracking: ${event}, User: ${userId}, Time: ${timestamp}`);
+}
+
+const trackerContext = { system: "AnalyticsService" };
+const argsFromRequest = ["login_attempt", "u123", "2025-06-03T12:00:00Z"];
+
+track.apply(trackerContext, argsFromRequest);
+```
+
+**Why is this real-world?**
+
+- Dynamic data often comes as arrays from APIs or logs.
+- `apply()` lets you unpack arrays to function arguments easily.
+
+---
+
+## 3. `bind()` — Preserve Context in Functional Callbacks
+
+Suppose you're writing a mail-sending service and want to bind a function reused in callbacks like `setTimeout`, event handlers, or async loops.
+
+```js
+function sendEmail() {
+    console.log(`Sending email to ${this.email}`);
+}
+
+const user = { email: "user@example.com" };
+
+// Delayed send, but `this` would be lost without `bind`
+const delayedSend = sendEmail.bind(user);
+
+setTimeout(delayedSend, 1000);
+```
+
+> **Key Point:**  
+> `bind` is functional: it returns a new function with `this` pre-attached. Useful in higher-order functions, retry logic, etc.
+
+---
+
+## 🎯 Bonus Memory Tip
+
+Think of these like you're "hiring" a function to work for a different object:
+
+- **call:** "Come work for me now (I’ll tell you your tools one-by-one)."
+- **apply:** "Come work for me now (I’ll give you your tools in a backpack)."
+- **bind:** "Here’s a job offer — come later, and remember you work for me."
+
+---
+
+## When Should You Use `.bind()`?
+
+You only need `bind()` in specific real-world situations where:
+
+1. You can’t (or don’t want to) pass arguments manually  
+     _Example: Passing the function as a reference to `setTimeout`, `EventEmitter`, `Promise.then()`, etc., but can’t pass arguments there._
+
+**🔑 Rule of Thumb:**  
+Use `bind()` only if your function uses `this` internally and you can’t (or shouldn’t) pass an argument manually.
+
+
+
+
+
+
+
+
+## More Examples of `bind()`
+
+### 1. Understanding `bind` with Function Context
+
+```js
+function f() {
+    console.log(this);
+}
+
+const user = {
+    g: f.bind(null)
+};
+
+user.g();
+```
+
+**What’s the output?**
+
+- **Output:** `null` (or the global object in non-strict mode)
+- **Explanation:** `bind(null)` sets `this` to `null`, so when `g` is called, `this` is `null`.
+
+---
+
+### 2. Partial Application with `bind`
+
+```js
+function multiply(a, b) {
+    return a * b;
+}
+
+const double = multiply.bind(null, 2);
+console.log(double(5));
+```
+
+**What’s the output?**
+
+- **Output:** `10`
+- **Explanation:** `bind` creates a new function `double` where `a` is fixed to `2`. Calling `double(5)` multiplies `2` and `5`.
+
+
 
 
 
