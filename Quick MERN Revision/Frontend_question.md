@@ -250,90 +250,101 @@ React breaks rendering into two distinct phases:
 
 ---
 
-🧠 What Happens in "Legacy Mode"?
-In pre-React 18 (legacy mode):
+## 🧠 What Happens in "Legacy Mode"?
 
-Rendering is synchronous and non-interruptible.
+**In pre-React 18 (legacy mode):**
 
-Once a component starts rendering, React blocks the main thread until it's done.
+- Rendering is **synchronous** and **non-interruptible**.
+- Once a component starts rendering, React **blocks the main thread** until it's done.
+- Long rendering tasks can **freeze the UI**, leading to poor user experience.
 
-That means long rendering tasks can freeze the UI, leading to poor UX.
+---
 
-⚙️ How React 18’s Concurrent Mode Works (Under the Hood)
-React 18 introduced a new concurrent rendering engine. Here's how it pauses and resumes rendering:
+## ⚙️ How React 18’s Concurrent Mode Works (Under the Hood)
 
-1. Scheduling with Time Slicing (via Scheduler)
-React uses a scheduling algorithm (built into the scheduler package) to:
+React 18 introduced a new concurrent rendering engine. Here’s how it enables pausing and resuming rendering:
 
-Break rendering into small units of work.
+### 1. Scheduling with Time Slicing
 
-After each unit, check if there’s a higher-priority task (like a user typing or clicking).
+React uses a scheduling algorithm (via the `scheduler` package) to:
 
-If so, it pauses rendering, lets the urgent task run, and resumes rendering later.
+- **Break rendering into small units of work.**
+- After each unit, **check for higher-priority tasks** (like user input).
+- If needed, **pause rendering**, let the urgent task run, and **resume rendering later**.
 
-This is called cooperative multitasking.
+> _This is called **cooperative multitasking**—like using `setTimeout` to break up a long task so other things can run in between._
 
-✅ Think of it like JavaScript setTimeout, where you break a long task into steps using short delays so you can do other things in between.
+---
 
-2. Interruptible Rendering
-React's internal renderer (Fiber) creates a linked list of work units called fibers.
+### 2. Interruptible Rendering
 
-Each fiber node represents a piece of the UI (e.g., a component or DOM element). These can now be processed individually.
+- React’s internal renderer (**Fiber**) creates a linked list of work units called **fibers**.
+- Each fiber node represents a piece of the UI (component or DOM element).
+- Fibers can be processed **individually and incrementally**.
 
-🧩 Example: If you're rendering a large list of components, React can render 20, pause, then resume with the 21st, etc.
+> **Example:** Rendering a large list—React can render 20 items, pause, then resume with the 21st, etc.
 
-3. Priority Levels
-React assigns priority lanes to updates:
+---
 
-Immediate (e.g., typing, clicks)
+### 3. Priority Levels
 
-User-blocking
+React assigns **priority lanes** to updates:
 
-Normal
+- **Immediate:** Typing, clicks
+- **User-blocking**
+- **Normal**
+- **Low priority**
+- **Idle**
 
-Low priority
+If a higher-priority update arrives during a lower-priority render:
 
-Idle
+- React **suspends** the low-priority task.
+- **Switches** to the urgent one.
+- **Resumes** the previous work when possible.
 
-If a higher-priority update comes while React is midway through a lower-priority render, it suspends the low-priority task and switches to the urgent one.
+---
 
-Once the urgent work is done, React resumes where it left off.
+### 4. No DOM Mutations Until Commit
 
-4. No DOM Mutations Until Commit
-Even though rendering is happening in "pieces", DOM is not updated until the commit phase.
+- Rendering happens in "pieces", but **DOM is updated only during the commit phase**.
+- Users **never see half-rendered UIs**.
 
-That means users never see half-rendered UIs.
+---
 
-Real World Example: Typeahead Search with useTransition
-jsx
-Copy
-Edit
+## 🧩 Real World Example: Typeahead Search with `useTransition`
+
+```jsx
 const [query, setQuery] = useState('');
 const [results, setResults] = useState([]);
 const [startTransition, isPending] = useTransition();
 
 const handleChange = (e) => {
-  const value = e.target.value;
-  setQuery(value); // urgent update
-  startTransition(() => {
-    // low-priority update (can be paused)
-    const filtered = heavySearch(value); 
-    setResults(filtered);
-  });
+    const value = e.target.value;
+    setQuery(value); // urgent update
+    startTransition(() => {
+        // low-priority update (can be paused)
+        const filtered = heavySearch(value); 
+        setResults(filtered);
+    });
 };
-Here:
+```
 
-setQuery(value) is urgent—React updates it immediately.
+**Explanation:**
 
-startTransition wraps a slower update (setResults) that React can pause/resume.
+- `setQuery(value)` is **urgent**—React updates it immediately.
+- `startTransition` wraps a **slower update** (`setResults`) that React can pause/resume.
 
-🛠️ TL;DR: How It Works Mechanically
-Step	What Happens
-Break into work units	React turns rendering into incremental steps (fibers).
-Check for interruptions	After each unit, React checks if there's something more urgent.
-Pause & switch tasks	If yes, React pauses and switches to the urgent task.
-Resume later	React resumes where it left off when the main thread is free.
-Commit	DOM is updated only once all work is done.
+---
+
+## 🛠️ TL;DR: How It Works Mechanically
+
+| Step                    | What Happens                                              |
+|-------------------------|----------------------------------------------------------|
+| Break into work units   | React turns rendering into incremental steps (fibers).   |
+| Check for interruptions | After each unit, React checks for more urgent work.      |
+| Pause & switch tasks    | If needed, React pauses and switches to urgent tasks.    |
+| Resume later            | React resumes where it left off when possible.           |
+| Commit                  | DOM is updated only once all work is done.               |
 
 ### 🌐 2. Hydration in React (SSR + CSR)
 
