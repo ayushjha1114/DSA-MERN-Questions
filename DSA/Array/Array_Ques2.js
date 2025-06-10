@@ -291,4 +291,47 @@ If you want combinations of arbitrary k, use the backtracking method above. */
 
 //-----------------------------------------------------------------------------------------------------
 
+// 73. Set Matrix Zeroes
+
+// Input: matrix = [[1,1,1],[1,0,1],[1,1,1]]
+// Output: [[1,0,1],[0,0,0],[1,0,1]]
+
+// let arr = [[1, 1, 1], 
+//           [1, 0, 1], 
+//           [1, 1, 1]]
+           
+let arr = [[1, 1, 1], 
+           [0, 1, 1], 
+           [1, 1, 1]]
+           
+           
+let row, col;
+
+for (let i = 0; i < arr.length; i++) {
+    for(let j = 0; j < arr[i].length; j++) {
+        if (arr[i][j] === 0) {
+            row = i;
+            col = j;
+            console.log(i , j)
+            // setMatrixZero(arr, 0, i)
+            // setMatrixZero(arr, 1, 0)
+        }
+    }
+}
+              setMatrixZero(row, col)
+
+function setMatrixZero(row, col) {
+    for(let x = 0; x < arr[row].length; x++) {
+        arr[x][col] = 0
+    }
+    for(let x = 0; x < arr[row].length; x++) {
+        arr[row][x] = 0
+    }
+}
+
+console.log(arr)
+
+
+//------------------------------------------------------------------------------------------------------
+
 

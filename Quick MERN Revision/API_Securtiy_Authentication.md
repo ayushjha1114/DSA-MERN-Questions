@@ -1,4 +1,4 @@
-# OWASP API Security Top 10
+# OWASP(Open Worldwide Application Security Project) API Security Top 10
 
 A practical guide to the OWASP API Security Top 10, including definitions, real-world examples, and mitigation strategies.
 
