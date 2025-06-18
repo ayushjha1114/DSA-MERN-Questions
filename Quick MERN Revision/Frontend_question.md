@@ -2283,3 +2283,450 @@ const Cart = () => {
 ```
 
 
+# CSS `position` Explained: Sticky Notes on a Whiteboard
+
+Imagine your webpage is like a whiteboard. You can put sticky notes (divs) on it in different ways:
+
+---
+
+## 🧱 `position: static` (default)
+> **“I just place the note on the board where it belongs.”**
+
+- The default position for most elements.
+- The note stays in the normal document flow.
+- You **can’t** move it using `top`, `left`, etc.
+- **Use when:** You want standard layout behavior.
+
+---
+
+## 🧲 `position: relative`
+> **“Put the note where it normally goes, but then move it a little without messing up the others.”**
+
+- The note stays in the flow, but you can nudge it with `top`, `left`, etc.
+- Other notes don’t move.
+- **Use when:** You want to slightly adjust an element’s position but keep it in the flow.
+
+---
+
+## 🎈 `position: absolute`
+> **“Pull this note out of the line and stick it anywhere on the board.”**
+
+- The note is removed from the normal flow.
+- Positioned relative to the nearest positioned ancestor (not static).
+- If no such ancestor, it’s positioned relative to the page.
+- **Use when:** You want elements to float freely, like tooltips, popups, or badges.
+
+---
+
+## 📌 `position: fixed`
+> **“Stick this note directly on your screen — no matter how you scroll, it stays in the same spot!”**
+
+- The note is fixed to the viewport.
+- Doesn’t move when the page scrolls.
+- **Use when:** You need persistent UI, like “Back to top” buttons, floating menus, or fixed headers.
+
+---
+
+## 🧷 `position: sticky`
+> **“Start normally, but if the board scrolls far enough, this note gets stuck at the top and won’t scroll away.”**
+
+- Starts in the normal flow.
+- When you scroll past it, it sticks to a defined position (like the top).
+- Returns to normal when scrolling back.
+- **Use when:** You want sticky section titles or headers.
+
+---
+
+## 🎨 Visual Example (in words)
+
+Imagine a web page like a long scroll:
+
+```
+[Header]          ← static (stays in place)
+[Menu]            ← sticky (sticks when scrolled)
+[Profile pic]     ← absolute (floats top-right of card)
+[Chat Button]     ← fixed (bottom right of screen, always there)
+```
+
+---
+
+## 💡 One-Liner Summary
+
+| Position  | Simple Meaning                                 |
+|-----------|------------------------------------------------|
+| static    | Just follow the normal flow                    |
+| relative  | Keep your place, but move a little             |
+| absolute  | Float freely, based on parent                  |
+| fixed     | Pin to screen, don’t move                      |
+| sticky    | Act normal until scrolled, then pin            |
+
+
+
+## 🚫 Limitations of HTML5 localStorage
+
+1. **❌ Storage Size Limit (~5MB)**
+    - Browsers typically limit localStorage to 5–10 MB per origin.
+    - You can’t store large files or lots of data.
+    - Store only lightweight, non-sensitive info (preferences, UI state, etc.).
+
+2. **🔓 Not Secure (Accessible via JavaScript)**
+    - localStorage is accessible to all scripts on the page.
+    - If your site has an XSS vulnerability, an attacker can steal the data.
+    - ⚠️ **Never store sensitive info** (auth tokens, passwords, PII) in localStorage.
+
+3. **🧠 Synchronous API = Blocking**
+    - All localStorage operations are synchronous and can block the main thread.
+    - Example:
+      ```js
+      localStorage.setItem("key", largeValue); // can cause UI lag
+      ```
+    - ⚠️ Unlike IndexedDB, which is asynchronous and non-blocking.
+
+4. **🔁 No Cross-Origin Sharing**
+    - localStorage is scoped per domain (origin).
+    - Data saved on `example.com` is not accessible from `sub.example.com` or `another.com`.
+
+5. **🧼 No Expiry or Auto-Cleanup**
+    - Data persists until manually cleared by:
+      - JavaScript (`localStorage.removeItem`)
+      - User (clearing browser data)
+      - Storage limits being exceeded
+    - No expiry date support (unlike cookies).
+
+6. **🧪 No Built-in Observability Across Tabs**
+    - If one tab updates localStorage, other tabs don't automatically know.
+    - Listen to the `storage` event:
+      ```js
+      window.addEventListener("storage", (event) => {
+         console.log("Storage changed in another tab!", event);
+      });
+      ```
+
+7. **🧩 Only Stores Strings**
+    - All values are stored as strings.
+    - Manually convert objects using `JSON.stringify()` and `JSON.parse()`.
+      ```js
+      localStorage.setItem("user", JSON.stringify({ name: "Zeus" }));
+      const user = JSON.parse(localStorage.getItem("user"));
+      ```
+
+---
+
+### ✅ When to Use (Despite Limitations)
+- Theme preference (dark/light)
+- UI toggle states
+- Language selection
+- Non-sensitive form drafts
+
+### ❌ Don’t Use For:
+- Access tokens / refresh tokens
+- Sensitive personal or financial data
+- Large datasets (use IndexedDB instead)
+
+### 🔐 Safer Alternatives
+
+| Need                        | Better Option         |
+|-----------------------------|----------------------|
+| Sensitive data              | HttpOnly cookies     |
+| Large offline data          | IndexedDB            |
+| Short-term, session-only    | sessionStorage       |
+
+---
+
+## 🧩 Inline, Block, and Inline-Block Elements
+
+1. **🧩 inline = Words in a sentence**
+    - Sits next to other elements in a row (like text).
+    - Can’t set width/height.
+    - Respects only left/right margins and paddings.
+    - Example:
+      ```html
+      <span style="display: inline;">Inline 1</span>
+      <span style="display: inline;">Inline 2</span>
+      ```
+    - ✅ Examples: `<span>`, `<a>`, `<strong>`, `<em>`
+
+2. **🧱 block = Big boxes that take full line**
+    - Takes the full width of the container.
+    - Starts on a new line.
+    - You can set width, height, margin, padding.
+    - Example:
+      ```html
+      <div style="display: block;">Block 1</div>
+      <div style="display: block;">Block 2</div>
+      ```
+    - ✅ Examples: `<div>`, `<p>`, `<h1>`–`<h6>`, `<section>`
+
+3. **📦 inline-block = Word that behaves like a box**
+    - Sits inline (side-by-side) like inline.
+    - Allows setting width and height like block.
+    - Example:
+      ```html
+      <div style="display: inline-block; width: 100px; height: 50px;">
+         Inline-Block 1
+      </div>
+      <div style="display: inline-block; width: 100px; height: 50px;">
+         Inline-Block 2
+      </div>
+      ```
+    - ✅ Good for: Buttons, tabs, tags (side-by-side, but control box size).
+
+---
+
+## 🔇 `event.stopPropagation()`
+
+- ❌ “Don’t let this event bubble up to parent elements.”
+- **What it does:** Stops the event from going up the DOM tree to parent elements.
+- **Why use it?** Prevent parent handlers from reacting to the same event.
+- **Example:**
+  ```html
+  <div onclick="alert('Parent clicked!')">
+     <button onclick="event.stopPropagation(); alert('Button clicked!')">
+        Click me
+     </button>
+  </div>
+  ```
+  - Without `stopPropagation()`: both button and parent show alerts.
+  - With `stopPropagation()`: only the button shows an alert.
+
+---
+
+## 🚫 `event.preventDefault()`
+
+- ❌ “Don’t do the browser’s default action for this event.”
+- **What it does:** Cancels the default behavior of an element (like navigating a link or submitting a form).
+- **Why use it?** Handle the action with JavaScript instead of letting the browser take over.
+- **Example:**
+  ```html
+  <a href="https://google.com" onclick="event.preventDefault(); alert('Stay here!')">
+     Go to Google
+  </a>
+  ```
+  - Without `preventDefault()`: the browser opens Google.
+  - With `preventDefault()`: stays on the page and shows alert.
+
+---
+
+## 🎯 Combined Example
+
+```html
+<form onclick="alert('form clicked')" onsubmit="event.preventDefault()">
+  <button onclick="event.stopPropagation()">Submit</button>
+</form>
+```
+- `preventDefault()` stops the form submission.
+- `stopPropagation()` stops the button click from triggering the form click alert.
+
+---
+
+## 🔁 Summary
+
+| Method             | What it stops                  | Common Use Case                        |
+|--------------------|-------------------------------|----------------------------------------|
+| `stopPropagation()`| Event bubbling (parent listeners) | Nested clicks, avoiding duplicate handlers |
+| `preventDefault()` | Default browser behavior       | Stop link, form, checkbox defaults     |
+
+
+
+
+# 🌐 What Is Web Accessibility?
+
+**Web Accessibility (a11y)** means building websites and apps so everyone, including people with disabilities, can use them easily.
+
+### Disabilities Supported
+
+- 👀 **Vision impairments:** blindness, low vision, color blindness
+- 🧏‍♀️ **Hearing impairments**
+- 🤕 **Motor impairments:** difficulty using mouse/keyboard
+- 🧠 **Cognitive disabilities:** e.g. dyslexia, ADHD
+
+---
+
+## 🎯 Why Is Accessibility Important?
+
+- **Inclusivity:** Ensures everyone can use your app.
+- **Legal Compliance:** Many countries have laws (e.g. ADA, WCAG, Section 508).
+- **Better UX for All:** Features like keyboard navigation, screen readers, and semantic HTML help everyone.
+- **SEO Boost:** Accessible HTML benefits search engines too.
+
+---
+
+## 📋 Why Do Interviewers Ask About It?
+
+- Good frontend leads design for everyone.
+- Accessibility affects HTML semantics, React structure, and user experience.
+- Shows you understand how the DOM and real users interact.
+- Often part of good frontend practices you already know.
+
+---
+
+## 👨‍💻 Accessibility in React
+
+You may already use a11y features:
+
+### ✅ Examples
+
+**Using semantic HTML:**
+```jsx
+<button onClick={handleClick}>Submit</button>   // ✅ Accessible
+<div onClick={handleClick}>Submit</div>         // ❌ Not accessible
+```
+
+**Adding alt text:**
+```jsx
+<img src="/logo.png" alt="Company Logo" />
+```
+
+**Using ARIA roles:**
+```jsx
+<div role="dialog" aria-modal="true">...</div>
+```
+
+- Making modals/focus traps keyboard-accessible
+- Handling keyboard events (e.g. `onKeyDown` for Enter, Esc)
+
+---
+
+## 🧠 Real Use Cases Where a11y Matters
+
+| Feature        | What You Should Do                               |
+| -------------- | ----------------------------------------------- |
+| Modal/Dialog   | Focus trap, Escape key close, `aria-modal`      |
+| Buttons        | Use `<button>`, not `<div>` or `<span>`         |
+| Forms          | Label inputs properly with `<label>`            |
+| Keyboard Nav   | Allow tab/arrow keys to work                    |
+| Screen Readers | Use `aria-label`, `role`, etc. if needed        |
+| Color Contrast | Ensure readable text                            |
+
+---
+
+## 🔧 Tools That Help
+
+- Chrome Lighthouse → Accessibility tab
+
+---
+
+## ✅ Q: How would you make a modal accessible?
+
+**Ideal Answer:**
+
+1. **Use semantic roles and ARIA attributes:**
+    - Add `role="dialog"` to the modal container.
+    - Use `aria-modal="true"` to inform assistive tech it's a modal.
+    - Associate a heading with `aria-labelledby="modal-title-id"` and/or a description with `aria-describedby`.
+
+2. **Implement keyboard accessibility:**
+    - Trap focus inside the modal (e.g. with `focus-trap-react`).
+    - Set initial focus to a meaningful element (e.g. close button).
+    - Allow closing the modal with Escape key.
+
+3. **Ensure background is inert:**
+    - Optionally, apply `aria-hidden="true"` or `inert` to the rest of the page when modal is open.
+    - Close on outside click (if appropriate), but only if it doesn't disrupt accessibility.
+
+4. **Test with tools:** Use axe or Lighthouse to verify WCAG 2.1 compliance.
+
+---
+
+## ✅ Q: How do you ensure a button is accessible?
+
+**Ideal Answer:**
+
+- Always use a native `<button>` element for built-in keyboard interaction and `role="button"`.
+- If the button only contains an icon, include an `aria-label` or visually hidden text to describe its purpose.
+
+```jsx
+<button aria-label="Close menu">
+  <XIcon />
+</button>
+```
+
+- Ensure the button is focusable, visible, and has sufficient color contrast.
+- Handle `onKeyDown` for accessibility in custom components.
+- Use `eslint-plugin-jsx-a11y` in React projects to catch violations early.
+
+---
+
+## ℹ️ How `aria-label` and `aria-modal="true"` Help People with Disabilities
+
+### 🎙️ `aria-label`
+
+- **Purpose:** Provides a textual label for elements with no visible label.
+- **Who benefits:** Blind or low-vision users using screen readers.
+- **Example:**
+  ```jsx
+  <button aria-label="Close menu">
+     <svg>…</svg>
+  </button>
+  ```
+  - Sighted users see the icon.
+  - Screen reader users hear “Close menu” when focused.
+
+- **Without `aria-label`:** Screen readers might just say "button" — confusing for users.
+
+---
+
+### 🧱 `aria-modal="true"`
+
+- **Purpose:** Tells assistive tech that the dialog is modal and focus should stay inside it.
+- **Who benefits:** Screen reader users and keyboard-only users.
+- **What it does:**
+  - Signals the modal is the current context.
+  - Hides or de-prioritizes background content.
+  - Works with `role="dialog"` or `role="alertdialog"`.
+
+  ```jsx
+  <div role="dialog" aria-modal="true">
+     …
+  </div>
+  ```
+
+- **Without `aria-modal`:**
+  - Screen readers may still announce the background.
+  - Users might get lost navigating outside the modal.
+
+---
+
+### 🧪 Combine with:
+
+| Technique           | Why it’s Important                        |
+| ------------------- | ----------------------------------------- |
+| `role="dialog"`     | Announces "dialog" to the user            |
+| `aria-labelledby`   | Announces modal title when dialog opens   |
+| `aria-describedby`  | Adds helpful context (e.g. warnings)      |
+| Focus trap          | Prevents tabbing outside the modal        |
+| Restore focus       | Returns user to previous context on close |
+
+---
+
+### 🎧 What a Screen Reader Might Say
+
+When modal opens:
+
+> "Dialog. Delete file? Are you sure you want to delete this? Button: Yes. Button: Cancel."
+
+This is possible if you use:
+- `aria-labelledby` for the title
+- `aria-describedby` for the body
+- `role="dialog"` and `aria-modal="true"` to isolate context
+
+---
+
+## ✅ Summary Table
+
+| Attribute           | Helps Who?           | What It Does                                  |
+| ------------------- | -------------------- | ---------------------------------------------- |
+| `aria-label`        | Screen reader users  | Adds invisible label for elements with no text |
+| `aria-modal="true"` | Screen reader users  | Makes assistive tech treat modal as focus area |
+
+---
+
+## 🧠 Why This Matters in Interviews
+
+- Shows you build for all users, not just sighted/mouse users.
+- Demonstrates understanding of semantic, accessible React components.
+- Indicates you build quality, inclusive, professional-grade software.
+
+---
+
+*Would you like a ready-to-use accessible React Modal component, or a checklist PDF for common accessibility tasks in frontend projects?*

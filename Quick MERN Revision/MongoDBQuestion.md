@@ -1020,3 +1020,445 @@ db.orders.insertOne({
 ```
 
 
+
+# Mongoose Schema Design: Users, Loans, Repayments
+
+## 🧍 User Schema
+
+```js
+const userSchema = new mongoose.Schema({
+    name: String,
+    email: { type: String, unique: true },
+    phone: String,
+    kycVerified: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+});
+```
+
+---
+
+## 💰 Loan Schema
+
+```js
+const loanSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    principalAmount: Number,
+    interestRate: Number,
+    termInMonths: Number,
+    startDate: Date,
+    status: { type: String, enum: ['pending', 'approved', 'repaid', 'defaulted'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now }
+});
+```
+
+---
+
+## 📄 Repayment Schema
+
+```js
+const repaymentSchema = new mongoose.Schema({
+    loan: { type: mongoose.Schema.Types.ObjectId, ref: 'Loan', required: true },
+    amount: Number,
+    dueDate: Date,
+    paidAt: Date,
+    status: { type: String, enum: ['due', 'paid', 'late'], default: 'due' },
+    createdAt: { type: Date, default: Date.now }
+});
+```
+
+---
+
+## 🔁 Embed vs Reference for Repayments
+
+**Would you embed repayments inside Loan?**  
+**Answer:** No (for production-scale systems).
+
+### ✅ Why Use Referencing (as above):
+
+| Factor                  | Reason                                                      |
+|-------------------------|-------------------------------------------------------------|
+| Many repayments per loan| Avoid document size limits (~16MB)                          |
+| Independent updates     | Each repayment can be updated without rewriting the entire loan |
+| Query flexibility       | Filter repayments across all loans (e.g., overdue repayments)|
+| Decoupling              | Easier to scale repayments independently                    |
+
+**🟨 When embedding is okay:** For tiny systems or if repayments are <10 and never change after creation.
+
+---
+
+# MongoDB Transactions with Mongoose
+
+### ✅ Use Case:
+Ensure loan creation and initial repayment schedule are saved atomically.
+
+### 🧱 Steps with Mongoose:
+
+```js
+const session = await mongoose.startSession();
+session.startTransaction();
+
+try {
+    const user = await User.findById(userId).session(session);
+
+    const loan = await Loan.create([{
+        user: user._id,
+        principalAmount: 10000,
+        interestRate: 12,
+        termInMonths: 12,
+        startDate: new Date(),
+    }], { session });
+
+    const repayments = generateRepaymentSchedule(loan[0]); // returns array
+    await Repayment.insertMany(repayments, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(201).json({ loan: loan[0] });
+} catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    return res.status(500).json({ message: 'Transaction failed', error: err.message });
+}
+```
+
+> ⚠️ **Important:** Transactions require MongoDB replica set (even if it's just one node locally for dev).
+
+
+
+# Optimizing Read-Heavy Dashboards in Fintech Apps (MongoDB + Caching)
+
+Ensuring high performance for read-heavy queries (like a user dashboard in a fintech app such as Paisabazaar) requires a combination of smart schema design, MongoDB features, and external caching.
+
+---
+
+## 1. Optimizing Read Performance: Strategy Breakdown
+
+| Layer      | Technique                        |
+|------------|----------------------------------|
+| 🔍 DB Query | Indexing & Projection            |
+| 🧮 Computation | Aggregation Pipelines         |
+| ⚡ Cache    | Redis or In-memory Caching       |
+| 🧱 Structure | Data Shaping & Denormalization  |
+
+---
+
+### A. Indexing Strategies
+
+- **Basic Indexes**: For user-based queries and status filters
+
+    ```js
+    db.loans.createIndex({ user: 1 })
+    db.repayments.createIndex({ loan: 1 })
+    db.loans.createIndex({ user: 1, status: 1 })
+    db.repayments.createIndex({ loan: 1, status: 1 })
+    ```
+
+- **Compound Index**: For dashboard filters (e.g., "loans approved in last 30 days")
+
+    ```js
+    db.loans.createIndex({ user: 1, status: 1, createdAt: -1 })
+    ```
+
+> 🔍 Always analyze query plans using `.explain()`.
+
+---
+
+### B. Aggregation Pipeline
+
+For a user dashboard, you might need:
+
+- Total active loans
+- Total outstanding amount
+- Repayment status summary
+
+```js
+Loan.aggregate([
+    { $match: { user: ObjectId(userId) } },
+    {
+        $lookup: {
+            from: 'repayments',
+            localField: '_id',
+            foreignField: 'loan',
+            as: 'repayments'
+        }
+    },
+    {
+        $project: {
+            principalAmount: 1,
+            status: 1,
+            totalPaid: {
+                $sum: {
+                    $map: {
+                        input: "$repayments",
+                        as: "r",
+                        in: { $cond: [{ $eq: ["$$r.status", "paid"] }, "$$r.amount", 0] }
+                    }
+                }
+            }
+        }
+    }
+]);
+```
+
+> ⚡ Use `$facet` to return multiple stats in a single query.
+
+---
+
+### C. Caching Layer (Redis)
+
+**When to use Redis:**
+
+- Same user loads dashboard multiple times a day
+- Expensive aggregate queries
+- High read-load patterns (e.g., mobile apps)
+
+**Key Patterns:**
+
+```js
+const cacheKey = `dashboard:${userId}`;
+const cached = await redis.get(cacheKey);
+if (cached) return JSON.parse(cached);
+
+// Otherwise compute and cache
+const dashboardData = await computeDashboard(userId);
+redis.set(cacheKey, JSON.stringify(dashboardData), 'EX', 60); // cache 1 min
+```
+
+> ⏳ Use short-lived cache (e.g., 60s) for fast-changing data.
+
+---
+
+### D. Denormalization (Selective)
+
+To avoid joins:
+
+- Store loan summary fields on the User document (e.g., `totalOutstanding`, `totalLoans`)
+- Update these via change streams, hooks, or workers
+
+**Example:**
+
+```js
+{
+    _id: ObjectId("..."),
+    name: "John",
+    totalOutstandingAmount: 12000,
+    totalLoans: 2
+}
+```
+
+Update these fields automatically and asynchronously using:
+
+---
+
+## 2. Updating Derived Fields: Techniques
+
+### 1. Change Streams – Native MongoDB Pub/Sub
+
+MongoDB can emit events in real-time when data changes.
+
+```js
+const changeStream = Loan.watch();
+changeStream.on('change', (change) => {
+    if (change.operationType === 'insert') {
+        const loan = change.fullDocument;
+        // Update user doc with incremented totalLoans
+    }
+});
+```
+
+- ✅ Works best when your app directly listens to MongoDB changes.
+- ⚠️ Requires replica set (works even in single-node dev).
+
+---
+
+### 2. Mongoose Hooks – Triggers within Node App
+
+Run logic after a repayment is saved.
+
+```js
+repaymentSchema.post('save', async function (doc, next) {
+    await User.findByIdAndUpdate(doc.user, {
+        $inc: { totalRepaid: doc.amount }
+    });
+    next();
+});
+```
+
+- ✅ Simple and localized logic
+- ⚠️ Only works if your Node service makes the DB changes (not safe across services)
+
+---
+
+### 3. Background Workers (Kafka, Bull, Redis)
+
+Publish an event to a queue; a background worker listens and updates MongoDB.
+
+```js
+// Producer (on repayment)
+kafkaProducer.send({
+    topic: "repayment-updates",
+    messages: [{ value: JSON.stringify({ userId, amount }) }]
+});
+
+// Worker
+kafkaConsumer.on("message", async ({ userId, amount }) => {
+    await User.findByIdAndUpdate(userId, {
+        $inc: { totalRepaid: amount }
+    });
+});
+```
+
+- ✅✅ Best for microservices/scale — fully decoupled
+
+---
+
+## 3. MongoDB Change Streams vs. Mongoose Hooks
+
+Both allow you to respond to data changes, but serve different purposes.
+
+### MongoDB Change Streams
+
+- **What:** Listen to real-time changes in collections (insert, update, delete) directly from the DB.
+- **When to use:** Reactive systems, cross-service event-driven architectures, syncing, auditing, notifications, analytics pipelines.
+
+**Example:**
+
+```js
+const changeStream = mongoose.connection.collection('loans').watch();
+
+changeStream.on('change', (change) => {
+    if (change.operationType === 'insert') {
+        console.log('New loan added:', change.fullDocument);
+        // e.g., Update summary fields in User collection
+    }
+});
+```
+
+- ⚠️ Requires MongoDB replica set
+- Works in any language, not just Node.js
+- Streams are durable and scalable
+
+---
+
+### Mongoose Hooks (Middleware)
+
+- **What:** Functions that run before/after certain operations like `.save()`, `.findOneAndUpdate()`, `.remove()`, etc.
+- **When to use:** Side effects (validation, cleanup, update other collections) only when the change is made via your Node.js app using Mongoose.
+
+**Example:**
+
+```js
+loanSchema.post('save', async function (doc, next) {
+    console.log(`Loan ${doc._id} created for user ${doc.user}`);
+    await User.findByIdAndUpdate(doc.user, { $inc: { totalLoans: 1 } });
+    next();
+});
+```
+
+- 🧠 Types: `pre('save')`, `post('save')`, `pre('find')`, `post('findOne')`, `pre('remove')`, etc.
+- ⚠️ Only triggers when Mongoose is used
+
+---
+
+## 4. Using Change Streams with Mongoose
+
+**Q:** If we use Mongoose, can we still use MongoDB Change Streams?  
+**A:** Yes! Access the native MongoDB driver from Mongoose:
+
+```js
+const changeStream = mongoose.connection.collection('loans').watch();
+
+changeStream.on('change', (change) => {
+    console.log('Loan document changed:', change);
+});
+```
+
+**Common Use Cases:**
+
+- Triggering a queue (Kafka, Redis)
+- Sending notifications
+- Updating analytics logs
+
+---
+
+## 5. How MongoDB Watches for Changes (Under the Hood)
+
+- MongoDB uses an event-driven architecture based on the oplog (operations log) in a replica set.
+- The `watch()` function tails the oplog — a real-time feed of DB operations.
+- Uses tailable cursors over TCP to stream events (not polling).
+
+> 💬 **Analogy:**  
+> Think of the change stream as a `subscribe()` call on the DB's internal write log. Whenever something is written to Mongo, you're notified over a long-lived TCP connection.
+
+
+
+
+# Apache Cassandra Overview
+
+Apache Cassandra is a high-performance, distributed NoSQL database designed to handle large volumes of structured, semi-structured, and unstructured data across many commodity servers, with no single point of failure. It is ideal for high-write throughput, horizontal scalability, and prioritizes availability over consistency (AP in the CAP theorem).
+
+---
+
+## 🔹 What is Cassandra?
+
+- **Type:** Wide-column NoSQL database
+- **Data Model:** Tables with rows and columns; columns can vary by row (hybrid between relational and key-value stores)
+- **Architecture:** Peer-to-peer distributed system (no master/slave; all nodes are equal)
+- **Consistency Model:** Eventually consistent (tunable consistency)
+- **Language:** Uses CQL (Cassandra Query Language), similar to SQL
+
+---
+
+## 🔹 Why Do We Use Cassandra?
+
+| Feature                | Benefit                                                      |
+|------------------------|--------------------------------------------------------------|
+| High Availability      | No single point of failure; nodes can fail and recover independently |
+| Linear Scalability     | Add more nodes without downtime; performance scales linearly |
+| High Write Throughput  | Optimized for fast, high-volume writes                       |
+| Multi-Data Center Support | Native support for geo-redundancy                        |
+| Tunable Consistency    | Choose between strong and eventual consistency per query     |
+
+---
+
+## 🔹 Cassandra vs MongoDB
+
+| Feature         | Cassandra                                              | MongoDB                                                      |
+|-----------------|-------------------------------------------------------|--------------------------------------------------------------|
+| Data Model      | Wide-column store (tables, partition keys, clustering keys) | Document store (JSON-like BSON)                        |
+| Write Performance | Excellent for high write loads                      | Good, but not as performant for write-heavy workloads        |
+| Consistency     | Eventually consistent (tunable)                       | Strong consistency by default                                |
+| Scaling         | Horizontally scalable, peer-to-peer                   | Sharded architecture, master-slave model                     |
+| Availability    | Very high (AP in CAP)                                 | Stronger consistency but can impact availability (CP in CAP) |
+| Use Case Fit    | Real-time analytics, time-series data, logs, sensor data, write-heavy apps | General-purpose, content management, e-commerce, read-heavy apps |
+
+---
+
+## 🔹 When Should You Use Cassandra?
+
+Use Cassandra if you have:
+
+- Write-heavy workloads (e.g., IoT, analytics pipelines, logs)
+- A need for high availability and zero downtime
+- Data distributed across multiple geographic locations
+- Requirements for horizontal scalability
+- Time-series data or append-only logs
+
+---
+
+## 🔹 When MongoDB Might Be Better
+
+- You need complex querying, aggregations, and indexing
+- You prefer a document-based flexible schema
+- You have read-heavy workloads
+- You need transactions across multiple documents
+
+---
+
+## 🧠 Real World Use Cases of Cassandra
+
+- **Netflix:** Viewing history and streaming metadata
+- **Instagram:** Messaging infrastructure
+- **Uber:** Storing trip data and logs
+- **Spotify:** User activity logging and recommendations
+

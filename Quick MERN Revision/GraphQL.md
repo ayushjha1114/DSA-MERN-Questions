@@ -1614,3 +1614,15 @@ import CreatePost from './CreatePost';
 // hardcoded authorId (replace with actual user ID from DB)
 <CreatePost authorId="PUT_A_VALID_USER_ID_HERE" />
 ```
+
+## Versioning
+
+As APIs evolve, their data structures and operations may change. For clients unaware of these changes, it can break their systems or introduce unknown errors.
+
+- **REST APIs:** Often include versioning in the URL to address this issue, e.g., `https://example.com/api/v1/person/12341`. However, versioning is not mandatory and can still lead to errors.
+- **GraphQL:** Requires API backward compatibility. Deleted fields return an error message, while deprecated fields return a warning.
+
+## Error Handling
+
+- **GraphQL:** Is a strongly typed API architecture, requiring a detailed schema describing data, its structure, and operations. This allows the system to automatically identify request errors and provide useful error messages.
+- **REST APIs:** Are weakly typed, so error handling must be implemented in the surrounding code. For example, if a `PUT` request parses a number value as text instead of as an integer, the system does not automatically identify the error.

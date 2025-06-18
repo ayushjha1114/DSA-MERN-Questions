@@ -5891,3 +5891,115 @@ async function readFilesInSequence(filePaths) {
     });
 })();
 ```
+
+
+
+## Q. What is a Webhook?
+
+A **webhook** is a way for one system to notify another system when an event happens, via an HTTP callback.
+
+> 🧠 **Think of it like:**  
+> “Hey, payment is done — here’s the data — go do your stuff.”
+
+Instead of polling every few seconds asking “Is the payment done?”, the payment provider (e.g., Razorpay, Stripe) sends an HTTP POST request to your server automatically when the event occurs (like payment success, failure, refund, etc.).
+
+### 🧾 Example: Razorpay Webhook
+
+```http
+POST /api/webhook/payment
+Content-Type: application/json
+
+{
+    "event": "payment.captured",
+    "payload": {
+        "payment": {
+            "email": "user@example.com",
+            "amount": 10000
+        }
+    }
+}
+```
+
+Your server would verify this request, and then trigger any follow-up actions (e.g., send receipt, notify user, update DB).
+
+---
+
+### ✅ When to use Webhooks
+
+- Payment confirmation from third-party services (Stripe, Razorpay, UPI)
+- Event-driven actions like SMS/email notifications
+- Asynchronous state updates between microservices
+
+---
+
+## Q. Closures & Memory Leaks in Node.js
+
+### 🔍 What is a Closure?
+
+A **closure** occurs when an inner function retains access to variables from its outer function even after the outer function has finished executing.
+
+### ❌ How Closures Cause Memory Leaks
+
+When long-lived objects (like event listeners, timers, or global variables) retain references to closed-over variables, those variables cannot be garbage collected, even if you don’t need them anymore.
+
+#### 🧠 Real-World Node.js Twist
+
+In long-running Node.js apps, especially in backend services:
+
+- Unremoved listeners (`.on()` without `.off()` or `.removeListener()`)
+- Unclosed intervals/timers
+- Caches holding closures
+- Misused singletons
+
+can all cause retained memory, leading to performance degradation over time (increased heap, GC pauses).
+
+---
+
+## Q. Handling Large File Uploads Securely (e.g., KYC Docs)
+
+### ✅ Strategy Overview
+
+| Concern      | Solution                                             |
+| ------------ | --------------------------------------------------- |
+| Large size   | Stream upload instead of loading into memory         |
+| Security     | Validate MIME type, file size, scan for viruses     |
+| Storage      | Upload directly to S3, GCS, or local disk using stream |
+| Limits       | Set size & type limits using middleware config      |
+
+### 🛠 Recommended Stack
+
+- **Multer** – for `multipart/form-data`
+- **Multer-S3** (if AWS)
+- **Busboy** or **streamifier** for streams
+- **ClamAV** – optional file virus scan
+
+---
+
+### ✅ Example: Multer with Limits (Memory Upload)
+
+```js
+const multer = require('multer');
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    fileFilter: (req, file, cb) => {
+        if (!['image/png', 'application/pdf'].includes(file.mimetype)) {
+            return cb(new Error('Invalid file type'), false);
+        }
+        cb(null, true);
+    },
+});
+```
+
+#### ✅ Route Example
+
+```js
+app.post('/upload', authenticate, upload.single('kycDoc'), async (req, res) => {
+    // Upload to S3 or save to DB/file system
+    const buffer = req.file.buffer;
+    // validate, scan, and store
+    res.json({ message: 'Upload successful' });
+});
+```
+
+> 🔐 **Always sanitize file names, limit upload paths, and avoid storing untrusted files publicly accessible.**

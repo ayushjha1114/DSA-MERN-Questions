@@ -1279,3 +1279,128 @@ app.use(express.urlencoded({ extended: true })); // For parsing application/x-ww
 ```
 
 
+# ✅ What is an HttpOnly Cookie?
+
+An **HttpOnly cookie** is a cookie that **cannot be accessed via JavaScript** (`document.cookie`). It's sent automatically with every HTTP request by the browser but is invisible to frontend scripts, protecting it from XSS attacks.
+
+---
+
+## 🔒 Why Use HttpOnly Cookies?
+
+- **Prevents token theft via XSS**
+- Commonly used to store **refresh tokens** or **session tokens** securely
+- Automatically attached to requests to the same domain by the browser
+
+---
+
+## 📦 Typical Use Case: Auth Flow with HttpOnly Cookies
+
+A secure token-based login flow using **access** and **refresh tokens**:
+
+### ✅ Step-by-Step Flow
+
+#### 1. User Logs In
+
+```http
+POST /api/login
+Body: { username, password }
+```
+
+**Backend does:**
+- Verifies credentials
+- Issues:
+    - **Access token** (short-lived JWT, e.g., 15 mins)
+    - **Refresh token** (long-lived JWT, e.g., 7–30 days)
+
+**Sends refresh token in HttpOnly cookie:**
+
+```http
+Set-Cookie: refreshToken=ey...; HttpOnly; Secure; SameSite=Strict; Path=/api/refresh
+```
+- `Secure` = only over HTTPS
+- `SameSite=Strict` or `Lax` = protection from CSRF
+
+---
+
+#### 2. Frontend Stores Access Token in Memory
+
+```js
+const accessToken = response.data.accessToken;
+// Use this token in the Authorization header:
+fetch('/api/protected', {
+    headers: {
+        Authorization: `Bearer ${accessToken}`,
+    }
+});
+```
+- **Do not store in localStorage**
+
+---
+
+#### 3. Access Token Expires → App Silently Refreshes
+
+- Frontend detects expired token (`401 Unauthorized`)
+- Makes a refresh request:
+
+```js
+fetch('/api/refresh', {
+    method: 'POST',
+    credentials: 'include' // Important: send cookies!
+});
+```
+
+- Backend verifies refresh token from the cookie
+- Issues a new access token:
+
+```json
+{
+    "accessToken": "new.jwt.token"
+}
+```
+
+- Frontend updates in-memory access token
+
+---
+
+#### 4. User Logout
+
+**Frontend:**
+```js
+fetch('/api/logout', { method: 'POST', credentials: 'include' });
+```
+
+**Backend clears cookie:**
+```http
+Set-Cookie: refreshToken=; HttpOnly; Secure; Max-Age=0; Path=/api/refresh
+```
+
+---
+
+## ✍️ Code Example (Node.js + Express)
+
+```js
+app.post('/login', (req, res) => {
+    const refreshToken = generateRefreshToken(user);
+    res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Strict',
+        path: '/api/refresh',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    const accessToken = generateAccessToken(user);
+    res.json({ accessToken });
+});
+```
+
+---
+
+## 🔐 Best Practices
+
+| Do ✅ | Avoid ❌ |
+|-------|---------|
+| Use HttpOnly, Secure, SameSite=Strict/Lax | ❌ SameSite=None unless needed for cross-site |
+| Store access token in memory | ❌ Don’t store access or refresh tokens in localStorage |
+| Use refresh endpoint with cookie | ❌ Don’t expose refresh token to frontend |
+| Protect refresh endpoint with CSRF headers if needed | ❌ Don’t mix multiple auth flows randomly |

@@ -108,3 +108,476 @@ async function main() {
 
 main();
 ```
+
+
+```js
+const p1 = Promise.resolve(1);
+const p2 = Promise.resolve(2);
+const p3 = Promise.resolve(3);
+
+Promise.all([p1, p2, p3])
+    .then(values => console.log(values)) // Output: [1, 2, 3]
+    .catch(err => console.error(err));
+```
+
+🔍 **Explanation:**  
+`Promise.all()` takes an array of promises and returns a new promise.  
+- It resolves when **all** input promises resolve, and gives an array of results.
+- If **any** one promise rejects, the whole thing rejects.
+
+✅ **Output:**
+```bash
+[1, 2, 3]
+```
+
+---
+
+```js
+const p4 = Promise.resolve(1);
+const p5 = Promise.resolve(2);
+const p6 = Promise.reject('Something went wrong');
+
+Promise.all([p4, p5, p6])
+    .then(values => console.log('Resolved values:', values))
+    .catch(err => console.error('Caught error:', err));
+```
+
+**Output:**
+```bash
+Caught error: Something went wrong
+```
+
+
+
+## 👩‍🏫 The Code
+
+```js
+for (var i = 0; i < 3; i++) {
+    setTimeout(() => console.log(i + 1), 1000);
+}
+```
+
+When it executed, looks like this-
+
+```js
+var i = undefined // due to hoisting
+for (i = 0; i < 3; i++) {
+    setTimeout(() => console.log(i + 1), 1000);
+}
+```
+
+
+---
+
+## 🧠 Key Concepts You Need to Know
+
+- `var` is **not block scoped** – all loop iterations share the same `i`.
+- `setTimeout` is **asynchronous** – it runs later, not immediately.
+- By the time the timeout runs, the loop has already finished.
+
+---
+
+## 🪜 Step-by-Step Breakdown
+
+### 🔁 Step 1: Loop Starts
+
+| i value | What is scheduled (setTimeout)                |
+|---------|-----------------------------------------------|
+| 0       | Schedule `console.log(i + 1)` after 1 second  |
+| 1       | Schedule `console.log(i + 1)` after 1 second  |
+| 2       | Schedule `console.log(i + 1)` after 1 second  |
+
+> None of those `console.log` statements run yet. They are scheduled to run later (after 1 second).
+
+---
+
+### 🛑 Step 2: Loop Ends
+
+- After the 3rd loop:
+  - `i` becomes 3
+  - Loop stops
+- Now `i` is 3, and it stays 3 when the timeout functions run.
+
+---
+
+### ⏱ Step 3: After 1 Second
+
+All 3 `setTimeout()` callbacks now run — but they all use the same `i` (because `var` doesn't make a new `i` for each loop).
+
+```js
+console.log(i + 1) // → console.log(3 + 1) → 4
+```
+This happens 3 times.
+
+---
+
+## 🧾 Final Output
+
+```
+4
+4
+4
+```
+
+---
+
+## 🧠 How to Remember It
+
+- ✅ `var` is shared — it's like giving everyone the same note that says “check i later.”
+- ❌ But no one saved what `i` was at the time.
+
+> By the time they check the note (after 1 second), `i = 3`, so they all say `3 + 1 = 4`.
+
+---
+
+## ✅ Code with `let`
+
+```js
+for (let i = 0; i < 3; i++) {
+    setTimeout(() => console.log(i + 1), 1000);
+}
+```
+
+if you want let to perform have way like var to print 4 thrice
+
+```js
+let i = undefined;
+for (i = 0; i < 3; i++) {
+    setTimeout(() => console.log(i + 1), 1000);
+}
+```
+
+---
+
+### 🔍 Step-by-Step Explanation
+
+#### 🧠 Key Concept
+
+- `let` is **block-scoped**, meaning each loop gets its own copy of `i`.
+- `setTimeout` runs the code after 1 second, not immediately.
+
+---
+
+#### 🪜 Step 1: Loop Starts
+
+| Iteration | i value | What is scheduled         |
+|-----------|---------|--------------------------|
+| 1st       | 0       | Schedule `console.log(1)`|
+| 2nd       | 1       | Schedule `console.log(2)`|
+| 3rd       | 2       | Schedule `console.log(3)`|
+
+> Thanks to `let`, each scheduled function remembers its own version of `i`.
+
+---
+
+#### ⏱ Step 2: After 1 Second
+
+All three `console.log(i + 1)` functions now run:
+
+1. First logs `1`
+2. Second logs `2`
+3. Third logs `3`
+
+---
+
+## 🧾 Final Output
+
+```
+1
+2
+3
+```
+
+
+
+```js
+function mystery() {
+    console.log(typeof a);
+    var a = 42;
+}
+
+mystery();
+```
+👉 **What will be the output? Why?**
+
+**✅ Correct Answer:** `undefined`  
+**🔍 Explanation:**  
+`var a` is hoisted to the top of the function scope, so the code behaves as if written:
+```js
+function mystery() {
+    var a;
+    console.log(typeof a); // 'undefined'
+    a = 42;
+}
+```
+`typeof undefined` → `"undefined"`
+
+Many developers mix this up with `typeof null` (which is `'object'`).
+
+**🧠 Side Tip:**
+```js
+typeof undefined       // 'undefined'
+typeof null            // 'object'  ❗
+typeof []              // 'object'
+typeof {}              // 'object'
+typeof function(){}    // 'function'
+```
+
+---
+
+```js
+function counter() {
+    var count = 0;
+    return {
+        inc: function () {
+            count++;
+            console.log(count);
+        },
+        dec: function () {
+            count--;
+            console.log(count);
+        }
+    };
+}
+
+const c1 = counter();
+const c2 = counter();
+
+c1.inc(); // ?
+c1.inc(); // ?
+c2.dec(); // ?
+```
+
+❓ **Why does `c1.inc()` print 2 the second time?**  
+Because both calls are using the same `counter()` closure instance, i.e., the same object `c1`.
+
+```js
+const c1 = counter();  // ✅ New closure: count = 0
+c1.inc();              // count becomes 1 → prints 1
+c1.inc();              // count becomes 2 → prints 2
+
+const c2 = counter();  // ✅ Another closure: count = 0 (fresh)
+c2.dec();              // count becomes -1 → prints -1
+```
+
+---
+
+```js
+var a = 10;
+
+function outer() {
+    console.log("Outer:", a);
+    var a = 20;
+
+    function inner() {
+        console.log("Inner:", a);
+    }
+
+    return inner;
+}
+
+const fn = outer();
+fn();
+```
+👉 **What will be the output and why?**
+
+**✅ Final Output:**
+```
+Outer: undefined
+Inner: 20
+```
+
+**🔍 Explanation:**  
+- `var a` inside `outer` is hoisted, so at `console.log("Outer:", a)`, the local `a` exists but is `undefined`.
+- After assignment, `a = 20`.
+- `inner` closes over the local `a`, so logs `20`.
+
+**🧠 Rule to Remember:**  
+In JavaScript, `var` is hoisted and function-scoped. If you declare `var a` inside a function, it shadows any outer `a`, even before its line is executed.
+
+---
+
+```js
+const obj = {
+    value: 42,
+    logLater: function () {
+        for (var i = 0; i < 3; i++) {
+            setTimeout(function () {
+                console.log(i, this.value);
+            }, i * 1000);
+        }
+    }
+};
+
+obj.logLater();
+```
+👉 **What will be printed and why?**  
+(Explain both the value of `i` and `this.value` in the output.)
+
+**✅ Actual Output:**
+```
+3 undefined
+3 undefined
+3 undefined
+```
+
+**🔍 Explanation:**  
+- `i` is declared with `var`, so it's function-scoped. By the time the callbacks run, `i` is `3`.
+- Inside `setTimeout(function () { ... })`, `this` is not bound to `obj` (it's `window` in non-strict mode, or `undefined` in strict mode).  
+- So `this.value` is `undefined` unless `window.value` is set.
+
+**🟢 Fixes:**
+- Use `let i` for block scoping.
+- Use arrow functions or `.bind(this)` to preserve `this`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Employees Table
+
+```sql
+CREATE TABLE Employees (
+  id INT PRIMARY KEY,
+  name VARCHAR(100),
+  department VARCHAR(100),
+  salary INT,
+  join_date DATE
+);
+```
+
+**Query:** Find the top 3 highest-paid employees in the 'Engineering' department, ordered by salary descending.
+
+```sql
+SELECT id, name, salary
+FROM Employees
+WHERE department = 'Engineering'
+ORDER BY salary DESC
+LIMIT 3;
+```
+
+---
+
+## Orders and Customers Tables
+
+```sql
+CREATE TABLE Orders (
+  id INT PRIMARY KEY,
+  customer_id INT,
+  order_date DATE,
+  amount DECIMAL
+);
+
+CREATE TABLE Customers (
+  id INT PRIMARY KEY,
+  name VARCHAR(100),
+  region VARCHAR(50)
+);
+```
+
+**Query:** Find the total order amount for each customer in the 'West' region.  
+Return: `customer_name`, `total_amount` — order by total descending.
+
+```sql
+SELECT c.name AS customer_name, SUM(o.amount) AS total_amount
+FROM Customers c
+JOIN Orders o ON c.id = o.customer_id
+WHERE c.region = 'West'
+GROUP BY c.name
+ORDER BY total_amount DESC;
+```
+
+
+
+## Get the 5th Highest Salary from an Employee Table
+
+To retrieve only the 5th highest **distinct** salary from an `employee` table, you can use the following SQL queries:
+
+### Query 1
+
+```sql
+SELECT DISTINCT salary
+FROM employee
+ORDER BY salary DESC
+LIMIT 1 OFFSET 4;
+```
+
+**Explanation:**
+- `ORDER BY salary DESC`: Sorts salaries from highest to lowest.
+- `DISTINCT`: Removes duplicates (important if multiple employees have the same salary).
+- `LIMIT 1 OFFSET 4`: Skips the top 4 and returns the 5th one.
+
+**Example:**  
+If salaries are: `100k, 90k, 90k, 80k, 70k, 60k`,  
+then the 5th distinct highest salary is **70k**.
+
+---
+
+### Query 2
+
+```sql
+SELECT MIN(salary) AS fifth_highest_salary
+FROM (
+    SELECT DISTINCT salary
+    FROM employee
+    ORDER BY salary DESC
+    LIMIT 5
+) AS top5;
+```
+
+**Explanation:**
+- **Inner query:** Fetches the top 5 distinct salaries in descending order.
+- **Outer query:** Picks the smallest one out of those — i.e., the 5th highest.
+
