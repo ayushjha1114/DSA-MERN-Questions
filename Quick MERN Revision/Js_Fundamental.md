@@ -836,3 +836,116 @@ function deepClone(obj) {
     return result;
 }
 ```
+
+
+
+# JavaScript Prototype Explained
+
+The **prototype** in JavaScript is a powerful mechanism that allows objects to inherit properties and methods from other objects.
+
+---
+
+## 🧠 In Simple Words
+
+Every JavaScript function has a `prototype` property. This is used to attach methods and properties that should be shared by all instances created using that function (typically via the `new` keyword).
+
+---
+
+## 🔧 Example
+
+```js
+function Person(name) {
+    this.name = name;
+}
+
+// Add a method to the prototype
+Person.prototype.sayHello = function () {
+    console.log(`Hello, I'm ${this.name}`);
+};
+
+// Create instances
+const alice = new Person('Alice');
+const bob = new Person('Bob');
+
+alice.sayHello(); // Hello, I'm Alice
+bob.sayHello();   // Hello, I'm Bob
+```
+
+✅ `sayHello` is not duplicated per instance — it is shared via the prototype.
+
+---
+
+## 🧬 Prototype Chain (Inheritance)
+
+Every JavaScript object has an internal link to its prototype, creating a chain:
+
+```
+alice → Person.prototype → Object.prototype → null
+```
+
+When you access a property/method on `alice`:
+
+1. JS checks `alice`
+2. If not found, checks `Person.prototype`
+3. Then `Object.prototype`
+4. If not found, returns `undefined`
+
+---
+
+## 🔍 `__proto__` vs `prototype`
+
+| Term       | Meaning                                                        |
+|------------|----------------------------------------------------------------|
+| `prototype`| Property of constructor functions (used to define shared methods) |
+| `__proto__`| Internal reference of objects to their prototype               |
+
+```js
+alice.__proto__ === Person.prototype // true
+Person.prototype.__proto__ === Object.prototype // true
+```
+
+---
+
+## 🧱 Built-in Prototypes
+
+Even native types use prototypes:
+
+```js
+const arr = [1, 2, 3];
+console.log(arr.__proto__ === Array.prototype); // true
+
+arr.push(4); // JS finds push() in Array.prototype
+```
+
+---
+
+## 🧠 Why Use Prototype?
+
+- **Memory efficient:** Shared methods instead of per-instance copies.
+- **Foundation for inheritance** (before ES6 classes).
+- **Enables dynamic behavior** like monkey patching (`Array.prototype.custom = ...`).
+
+---
+
+## 🔄 Prototype vs Class
+
+ES6 `class` is syntactic sugar over prototype-based inheritance:
+
+```js
+class Animal {
+    speak() {
+        console.log('I speak');
+    }
+}
+const a = new Animal();
+```
+
+Internally behaves like:
+
+```js
+function Animal() {}
+Animal.prototype.speak = function () {
+    console.log('I speak');
+};
+```
+

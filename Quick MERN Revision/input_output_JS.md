@@ -581,3 +581,184 @@ FROM (
 - **Inner query:** Fetches the top 5 distinct salaries in descending order.
 - **Outer query:** Picks the smallest one out of those — i.e., the 5th highest.
 
+
+
+## ✅ General SQL Query to Find Duplicates
+
+```sql
+SELECT column1, column2, COUNT(*)
+FROM table_name
+GROUP BY column1, column2
+HAVING COUNT(*) > 1;
+```
+> Replace `column1, column2` with the columns that should be unique together.
+
+---
+
+### 🔍 Example: Find Duplicate Emails in `users` Table
+
+```sql
+SELECT email, COUNT(*) AS count
+FROM users
+GROUP BY email
+HAVING COUNT(*) > 1;
+```
+
+---
+
+### 🧾 Example: Find Full Duplicate Rows
+
+If you want to find all columns duplicated (entire row repeated):
+
+```sql
+SELECT *, COUNT(*)
+FROM users
+GROUP BY id, name, email -- or all columns
+HAVING COUNT(*) > 1;
+```
+
+---
+
+## ✅ 1. Using LIMIT and OFFSET (MySQL, PostgreSQL)
+
+```sql
+-- 3rd highest salary (N = 3)
+SELECT DISTINCT salary
+FROM employees
+ORDER BY salary DESC
+LIMIT 1 OFFSET 2;
+```
+- `OFFSET N-1`: Skips the top N−1 salaries  
+- `LIMIT 1`: Picks the N-th salary
+
+
+
+
+## Employee Salary Data
+
+| EMPID | SAL  | Month | Year |
+|-------|------|-------|------|
+| 1     | 1000 | 1     | 2024 |
+| 1     | 3000 | 2     | 2024 |
+| 1     | 2000 | 3     | 2024 |
+| 1     | 1000 | 4     | 2024 |
+| 2     | 2000 | 1     | 2024 |
+| 2     | 500  | 2     | 2024 |
+| 2     | 400  | 3     | 2024 |
+| 2     | 1000 | 4     | 2024 |
+| 3     | 700  | 1     | 2024 |
+| 3     | 500  | 2     | 2024 |
+| 3     | 400  | 3     | 2024 |
+| 3     | 2000 | 4     | 2024 |
+
+---
+
+### Question
+
+**Which employee receives the maximum salary for the first quarter (Q1) of 2024?**
+
+- **Q1 months:** January, February, March (Month 1, 2, 3)
+
+---
+
+### SQL Query
+
+```sql
+SELECT EMPID, SUM(SAL) AS total_q1_salary
+FROM Employee
+WHERE Month IN (1, 2, 3) AND Year = 2024
+GROUP BY EMPID
+ORDER BY total_q1_salary DESC
+LIMIT 1;
+```
+
+---
+
+### Step-by-step Calculation
+
+| EMPID | Month 1 | Month 2 | Month 3 | Q1 Total |
+|-------|---------|---------|---------|----------|
+| 1     | 1000    | 3000    | 2000    | 6000     |
+| 2     | 2000    | 500     | 400     | 2900     |
+| 3     | 700     | 500     | 400     | 1600     |
+
+**Employee 1 receives the maximum salary in Q1 2024 (₹6000).**
+
+
+
+
+Let's analyze your two tables and show the output of different types of joins (`LEFT JOIN`, `RIGHT JOIN`, and `INNER JOIN`) using the condition `T1.A = T2.A`.
+
+## Tables
+
+**T1**
+
+| A | B | C |
+|---|---|---|
+| 1 | 2 | 4 |
+| 2 | 3 | 5 |
+
+**T2**
+
+| A    | B | C |
+|------|---|---|
+| 1    | 4 | 3 |
+| NULL | 3 | 4 |
+
+---
+
+## 🔗 Join on `T1.A = T2.A`
+
+### 1. INNER JOIN
+
+```sql
+SELECT * FROM T1 INNER JOIN T2 ON T1.A = T2.A;
+```
+✅ Only matching rows from both tables (where `T1.A = T2.A`):
+
+| T1.A | T1.B | T1.C | T2.A | T2.B | T2.C |
+|------|------|------|------|------|------|
+| 1    | 2    | 4    | 1    | 4    | 3    |
+
+---
+
+### 2. LEFT JOIN
+
+```sql
+SELECT * FROM T1 LEFT JOIN T2 ON T1.A = T2.A;
+```
+✅ All rows from T1, matched rows from T2, `NULL` if no match:
+
+| T1.A | T1.B | T1.C | T2.A | T2.B | T2.C |
+|------|------|------|------|------|------|
+| 1    | 2    | 4    | 1    | 4    | 3    |
+| 2    | 3    | 5    | NULL | NULL | NULL |
+
+---
+
+### 3. RIGHT JOIN
+
+```sql
+SELECT * FROM T1 RIGHT JOIN T2 ON T1.A = T2.A;
+```
+✅ All rows from T2, matched rows from T1, `NULL` if no match:
+
+| T1.A | T1.B | T1.C | T2.A | T2.B | T2.C |
+|------|------|------|------|------|------|
+| 1    | 2    | 4    | 1    | 4    | 3    |
+| NULL | NULL | NULL | NULL | 3    | 4    |
+
+---
+
+## Selecting Rows Where `T2.A IS NULL`
+
+If you want to select the row where `T2.A IS NULL`, use:
+
+```sql
+SELECT * FROM T2 WHERE A IS NULL;
+```
+✅ Output:
+
+| A    | B | C |
+|------|---|---|
+| NULL | 3 | 4 |
