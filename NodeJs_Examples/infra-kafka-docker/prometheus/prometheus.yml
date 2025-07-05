@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:9000']
