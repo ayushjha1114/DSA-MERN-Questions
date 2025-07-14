@@ -70,6 +70,23 @@ services:
     networks:
       - kafka-net
 
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: authuser
+      POSTGRES_PASSWORD: authpass
+      POSTGRES_DB: authdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kafka-net
+
+volumes:
+  postgres_data:
+
 networks:
   kafka-net:
     driver: bridge

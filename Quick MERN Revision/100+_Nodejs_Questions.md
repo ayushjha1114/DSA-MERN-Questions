@@ -998,16 +998,14 @@ async function getUser(id) {
 ## Q18: What is N-API in Node.js?
 
 ### 🔍 What is N-API?
-N-API (Node.js API) is a **stable, ABI-independent API layer** for building native add-ons (C/C++ modules) for Node.js. It allows your native code to work across Node.js versions **without recompilation**.
-
-- **Write performance-critical code in C/C++** that plugs into your JavaScript app, safely and portably.
+N-API (Node.js API) is a C API provided by Node.js to write native modules in C or C++ that work across Node versions without breaking.
 
 ---
 
 ### 🧠 Why Use N-API?
 - Node.js is written in C++. Sometimes JavaScript isn’t fast enough for:
-    - Heavy computations (e.g., cryptography, image processing)
-    - Wrapping existing C/C++ libraries (e.g., OpenSSL, libxml)
+    - You need high-performance native code (e.g., image processing, encryption, hardware access).
+    - You need high-performance native code (e.g., image processing, encryption, hardware access). (e.g., OpenSSL, libxml)
     - Accessing low-level system APIs (e.g., GPU, drivers)
     - Boosting performance where JS is too slow
 
@@ -6003,3 +6001,33 @@ app.post('/upload', authenticate, upload.single('kycDoc'), async (req, res) => {
 ```
 
 > 🔐 **Always sanitize file names, limit upload paths, and avoid storing untrusted files publicly accessible.**
+
+
+# To prevent uncaught exceptions at the application level in Node.js, use a combination of global error handling, best practices, and safe async code structure.
+
+## 1. Catch Uncaught Exceptions Globally
+
+> **Not recommended for recovery, but good for logging**
+
+```js
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    // Optional: cleanup, alerting
+    process.exit(1); // safest to shut down
+});
+```
+
+**Note:** Don’t try to recover from uncaught exceptions — they leave your app in an inconsistent state.
+
+---
+
+## 2. Handle Unhandled Promise Rejections
+
+```js
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection:', reason);
+    // Optional: cleanup, alerting
+    process.exit(1); // restart via PM2, Docker, etc.
+});
+```
+

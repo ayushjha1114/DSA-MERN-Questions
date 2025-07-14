@@ -2935,3 +2935,83 @@ Understanding the cascade helps you:
 - Debug and refactor CSS more effectively
 - Work better with design systems and utility-first CSS
 
+
+## 🔐 What is Content Security Policy (CSP)?
+
+Content Security Policy (CSP) is a browser security feature that helps prevent attacks like:
+
+- **Cross-Site Scripting (XSS)**
+- **Clickjacking**
+- **Data injection**
+
+It works by telling the browser which sources of content (scripts, styles, images, etc.) are allowed to load on your website.
+
+You define a CSP using the `Content-Security-Policy` HTTP header.
+
+---
+
+### 📜 Example Policy
+
+```http
+Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none';
+```
+
+Let’s break this down:
+
+- **`default-src 'self';`**  
+    Sets the default rule for all content types.  
+    `'self'` means only allow content from the same origin (domain as the page itself).  
+    If no other directive is defined (like for images or styles), it inherits this.
+
+- **`script-src 'self';`**  
+    Applies specifically to JavaScript files.  
+    Only allows scripts from the same origin (your own domain).  
+    **Prevents loading scripts from:**
+    - CDNs (e.g., cdnjs.cloudflare.com)
+    - Third-party domains
+    - Inline `<script>` blocks (unless `'unsafe-inline'` is added, which is not recommended)
+
+- **`object-src 'none';`**  
+    Blocks `<object>`, `<embed>`, and `<applet>` tags.  
+    These can be dangerous—attackers may use them for plugin-based attacks.  
+    `'none'` means don't allow them at all.
+
+---
+
+## 🔥 Why Use CSP?
+
+| Benefit                        | Description                                                        |
+|---------------------------------|--------------------------------------------------------------------|
+| 🛡️ Prevent XSS                 | Even if an attacker injects JS, browser won’t run it unless allowed|
+| 🔒 Whitelist only trusted sources | You control what content gets loaded                              |
+| 🧠 Adds defense-in-depth        | CSP is not a silver bullet, but it adds another security layer     |
+
+---
+
+## 🚨 Common Mistakes to Avoid
+
+| Mistake            | Why It’s Bad                                                      |
+|--------------------|-------------------------------------------------------------------|
+| `script-src *`     | Allows any script from any domain—defeats the purpose             |
+| Using `'unsafe-inline'` | Allows inline scripts, which is what attackers often inject   |
+| Forgetting to test | CSP can break your site if not tested properly                    |
+
+---
+
+## ✅ Safer Example with More Directives
+
+```http
+Content-Security-Policy:
+    default-src 'self';
+    script-src 'self';
+    style-src 'self' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data:;
+    object-src 'none';
+```
+
+This:
+
+- Allows styles and fonts from Google Fonts
+- Allows inline images (like `data:image/png;base64,...`)
+- Blocks embedded content (`object-src none`)

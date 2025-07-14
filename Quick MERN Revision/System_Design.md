@@ -1355,3 +1355,86 @@ To block abuse (e.g., brute force) while maintaining user experience:
 - Use streams for I/O with built-in backpressure.
 - Use thread pools or bounded queues for CPU-heavy tasks to avoid memory exhaustion.
 
+
+
+# 🧠 What is a Reverse Proxy?
+
+A **reverse proxy** is a server that sits in front of your backend servers (like APIs, apps, databases) and handles incoming requests on their behalf.
+
+---
+
+## 🎯 Purpose
+
+- **Hides internal servers** from the outside world
+- Handles things like:
+    - Load balancing
+    - Authentication
+    - Caching
+    - SSL termination (HTTPS)
+
+---
+
+## 🔁 Reverse vs. Forward Proxy
+
+| Term           | Acts On Behalf Of | Used By           | Common Use                        |
+|----------------|------------------|-------------------|-----------------------------------|
+| **Forward Proxy** | The client        | Browsers, users   | Bypass firewall, anonymity        |
+| **Reverse Proxy** | The server        | Websites, APIs    | Scalability, security, performance|
+
+---
+
+## 🍔 Analogy: A Restaurant Host
+
+Imagine:
+
+- You go to a restaurant.
+- A host at the front desk takes your request (table for 2, menu questions, etc.)
+- The host:
+    - Checks table availability
+    - Talks to kitchen staff
+    - Brings you food from the kitchen
+
+**🟢 The host = reverse proxy**  
+**🍳 The kitchen = backend server (API, database, app server)**  
+**🧑‍🍳 You never directly interact with the kitchen — just the host.**
+
+---
+
+## 🖼️ Diagram
+
+```
+Client (browser/mobile) 
+                │
+                ▼
+ ┌───────────────┐
+ │ Reverse Proxy │  ← e.g., Nginx, Kong, HAProxy
+ └───────────────┘
+                │
+ ┌──────┴──────┐
+ │ App Server 1│
+ │ App Server 2│ ← Actual APIs or services
+ └─────────────┘
+```
+
+---
+
+## 🛠️ Example in Real Life
+
+- You go to `https://api.myapp.com`
+- That request hits a reverse proxy (like Kong or Nginx)
+- The proxy:
+    - Authenticates you
+    - Forwards the request to service-a or service-b
+    - Logs the request
+    - Sends back the response
+
+---
+
+## 🚀 Benefits of Using a Reverse Proxy
+
+| Feature            | Why It Matters                                 |
+|--------------------|------------------------------------------------|
+| 🔐 Security        | Hides internal services; blocks bad requests   |
+| ⚖️ Load Balancing  | Distributes traffic across multiple servers    |
+| 🧠 Central Control | Rate limiting, caching, logging in one place   |
+| 🔒 HTTPS Support   | Handle TLS/SSL at proxy level                  |

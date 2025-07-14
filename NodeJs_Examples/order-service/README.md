@@ -2,6 +2,8 @@
 
 This service creates Kafka events.
 
+---
+
 ## Docker Commands
 
 ### Build the Docker Image
@@ -16,7 +18,7 @@ docker build -t order-service .
 docker run --network infra-kafka-docker_kafka-net -p 3001:3001 --env-file .env order-service
 ```
 
-- The above command runs the order service in the `kafka-net` network (shared with other repositories).
+> The above command runs the order service in the `kafka-net` network (shared with other repositories).
 
 ---
 
@@ -50,3 +52,15 @@ Follow these steps:
     docker build -t order-service .
     docker run --network infra-kafka-docker_kafka-net -p 3001:3001 --env-file .env order-service
     ```
+
+---
+
+## Example: Run the Order API
+
+You can use `curl` to create an order:
+
+```bash
+curl --location 'http://localhost:3001/order' \
+  --header 'Content-Type: application/json' \
+  --data '{"id": "order-106", "item": "face wash", "quantity": 1}'
+```

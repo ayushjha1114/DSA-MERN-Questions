@@ -137,3 +137,173 @@ App checks cache → if miss, loads from DB and writes to cache.
 - Read-heavy
 - Expensive to compute
 - Shared across users
+
+
+# Caching Strategies Cheat Sheet
+
+## ✅ Why Use Caching?
+- Reduce latency
+- Decrease load on databases/services
+- Improve scalability
+
+---
+
+## 🔹 Common Caching Types
+
+### 1. **In-Memory Cache**
+- **Tools:** Node.js memory, `lru-cache`, `node-cache`
+- **Use When:** Ultra-fast, per-instance caching (e.g., config values, small datasets)
+- **Drawback:** Not persistent across app restarts or distributed instances
+
+### 2. **Distributed Cache**
+- **Tools:** Redis, Memcached
+- **Use When:** Shared cache across multiple app instances/services
+- **Supports:** Expiration, pub/sub, persistence (Redis AOF/RDB), eviction policies (LRU, LFU)
+
+---
+
+## 🔹 Caching Strategies by Behavior
+
+### 3. **Read-Through Cache**
+- **Flow:** App reads from cache → If miss, loads from DB → Stores in cache → Returns result
+- **Best For:** Frequently-read data (user profiles, config, product details)
+- **Pro:** Automatic population
+- **Con:** Initial cache miss may delay response
+
+### 4. **Write-Through Cache**
+- **Flow:** App writes to both DB and cache on every update
+- **Best For:** When consistency between DB and cache is critical
+- **Con:** Slower writes
+
+### 5. **Write-Behind (Write-Back) Cache**
+- **Flow:** App writes only to cache → Cache asynchronously writes to DB
+- **Best For:** High-write systems where write latency matters
+- **Con:** Risk of data loss if cache fails before DB write
+
+### 6. **Cache-Aside (Lazy Caching)**
+- **Flow:** App tries cache → If miss, fetches from DB → Stores in cache manually
+- **Notes:** Most commonly used strategy; good balance of simplicity and control; often combined with Redis + Node.js
+
+### 7. **Time-Based Expiry / TTL**
+- **Description:** Cached items expire after a fixed time
+- **Useful For:** News, pricing, or stock info that updates periodically
+- **Example:** `Redis.set(key, value, 'EX', 60)`
+
+### 8. **Eviction Policies**
+- **When:** Cache exceeds memory limit
+- **Types:**
+    - **LRU (Least Recently Used):** Default in most libraries
+    - **LFU (Least Frequently Used):** More precise for hotspot data
+    - **FIFO (First In First Out):** Simple, but not always optimal
+
+---
+
+## 🔹 Advanced Strategies
+
+### 9. **Cache Invalidation**
+- **Goal:** Remove outdated/stale data from cache correctly
+- **Triggers:** Manual (on update/delete), TTL, or version tags
+- **Challenge:** Consistency in distributed systems
+
+### 10. **Content Delivery Network (CDN) Caching**
+- **Use For:** Static assets (images, CSS, JS, HTML/SSR)
+- **Tools:** Cloudflare, AWS CloudFront, Vercel edge cache
+- **Benefit:** Cache at edge servers near the user
+
+### 11. **Local Cache + Remote Fallback**
+- **Flow:** Use in-process cache first, fallback to Redis or DB if miss
+- **Benefit:** Reduces latency and avoids frequent Redis lookups
+- **Popular In:** GraphQL resolvers, middleware caching
+
+---
+
+## 🔷 Read-Heavy Use Case
+
+### ✅ Scenario
+**Product catalog service for an e-commerce website:**
+- 10,000 users browsing products
+- Only 500 users making purchases at any time
+
+### 🧠 Characteristics
+- High read-to-write ratio
+- Product info changes infrequently
+- Need fast response times for UI
+
+### ✅ Caching Strategy
+- **Cache-aside (lazy caching) with Redis**
+- **TTL:** e.g., 10 minutes
+- **Eviction policy:** LRU (evict least accessed)
+
+```ts
+// Node.js pseudo-example
+const cachedProduct = await redis.get(`product:${productId}`);
+if (cachedProduct) return JSON.parse(cachedProduct);
+
+const product = await db.getProduct(productId);
+await redis.set(`product:${productId}`, JSON.stringify(product), 'EX', 600); // 10 min TTL
+return product;
+```
+
+### ✅ Why it works
+- Minimizes DB reads
+- Redis serves fast responses (low latency)
+- TTL ensures eventual consistency
+- Stale reads are tolerable (acceptable for product display)
+
+---
+
+## 🔷 Write-Heavy Use Case
+
+### ✅ Scenario
+**Real-time analytics event collector:**
+- Thousands of events/second being written
+- Users rarely read individual events — reads happen in batches or aggregated form
+
+### 🧠 Characteristics
+- High write volume
+- Low read volume
+- Data freshness is critical
+
+### ✅ Caching Strategy
+- **Write-back (write-behind) cache or batch buffer**
+- Writes go to Redis (or Kafka/queue), then async to DB
+- Use TTL carefully or not at all for raw data
+- Add deduplication or compression if needed
+
+```ts
+// Write to Redis first
+await redis.lpush('events', JSON.stringify(eventData));
+
+// Background worker flushes to DB every 5 seconds
+```
+
+### ✅ Why it works
+- Offloads DB pressure by buffering writes
+- Helps absorb spikes without dropping events
+- May use Redis Streams, Kafka, or queue + DB batch write
+
+---
+
+## 🔁 Hybrid Example
+
+### ✅ Scenario
+**User session service**
+- Reads are frequent (check if user is logged in)
+- Writes are occasional (login/logout, token refresh)
+
+### Strategy
+- Use write-through cache for consistency
+- Store session in Redis with expiry
+- Read from Redis in every request
+
+---
+
+## 🔚 Summary
+
+| Use Case   | Read-Heavy                | Write-Heavy                  |
+|------------|---------------------------|------------------------------|
+| Example    | Product catalog           | Event ingestion / analytics  |
+| Strategy   | Cache-aside + TTL         | Write-back / queue-buffer    |
+| Cache Type | Redis (GET-first)         | Redis/Kafka (write-first, async DB) |
+| Priority   | Low latency for frequent reads | High throughput, DB write protection |
+| Eviction   | LRU / TTL                 | Rarely evict (until batch flush)     |

@@ -949,3 +949,96 @@ Animal.prototype.speak = function () {
 };
 ```
 
+# TypeScript: Non-Null Assertion, Optional Chaining, and Nullish Coalescing
+
+Let's break down the differences between three useful TypeScript operators:
+
+- **Non-null assertion (`!`)**
+- **Optional chaining (`?.`)**
+- **Nullish coalescing (`??`)**
+
+We'll cover their purpose, examples, and when to use each.
+
+---
+
+## 1. Non-Null Assertion (`!`)
+
+**Purpose:**  
+Tell TypeScript: “I know this is not `null` or `undefined`, trust me.”
+
+**Example:**
+```ts
+const name: string | undefined = "Alice";
+const length = name!.length; // OK: TypeScript won't complain
+```
+> ⚠️ If `name` is `undefined` at runtime, this will crash:
+> `Cannot read property 'length' of undefined`
+
+---
+
+## 2. Optional Chaining (`?.`)
+
+**Purpose:**  
+Safely access properties only if the left side isn’t `null` or `undefined`.
+
+**Example:**
+```ts
+const user = { name: "Alice" };
+console.log(user?.name);           // Alice
+console.log(user?.email);          // undefined
+console.log(user?.email?.length);  // undefined, does NOT crash
+```
+
+**Bonus:**
+```ts
+const button = document.getElementById("btn");
+button?.addEventListener("click", () => console.log("clicked")); // Safe
+```
+> ✅ Doesn't throw if `button` is `null`
+
+---
+
+## 3. Nullish Coalescing (`??`)
+
+**Purpose:**  
+Provide a default only if value is `null` or `undefined` (not `false`, `0`, or `''`).
+
+**Example:**
+```ts
+const input: string | undefined = undefined;
+const result = input ?? "default value"; // "default value"
+```
+
+**Compare to `||`:**
+```ts
+const zero = 0;
+console.log(zero || 100); // 100 (because 0 is falsy)
+console.log(zero ?? 100); // 0 (because 0 is NOT null/undefined)
+```
+
+---
+
+## Summary Table
+
+| Operator | Purpose                        | Use When...                      | Safe at runtime? | Example              |
+|----------|-------------------------------|----------------------------------|------------------|----------------------|
+| `!`      | Assert non-null                | You know it's not null/undefined | ❌ No            | `x!.length`          |
+| `?.`     | Optional chaining              | May or may not exist             | ✅ Yes           | `user?.name`         |
+| `??`     | Nullish coalescing (default)   | Fallback only if null/undefined  | ✅ Yes           | `input ?? "default"` |
+
+---
+
+## Real Example Using All 3
+
+```ts
+type User = {
+    name?: string;
+};
+
+const user: User | null = null;
+
+const usernameLength = user?.name?.length ?? 0; // Safe, returns 0
+
+const guaranteedLength = user!.name!.length;    // Unsafe: may throw at runtime
+```
+

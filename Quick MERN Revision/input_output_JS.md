@@ -793,3 +793,69 @@ SELECT * FROM T2 WHERE A IS NULL;
 | A    | B | C |
 |------|---|---|
 | NULL | 3 | 4 |
+
+
+To find artists who released more than 2 albums, where each album has an average song duration of more than 200 seconds, you can use the following SQL queries:
+
+---
+
+### 1. Get Albums with Average Song Duration > 200 Seconds
+
+```sql
+SELECT artist_id
+FROM albums a
+JOIN songs s ON a.album_id = s.album_id
+GROUP BY a.album_id, a.artist_id
+HAVING AVG(s.duration) > 200;
+```
+
+This query gets all albums where the average song duration is greater than 200 seconds, grouped by album.
+
+---
+
+### 2. Get Artists with More Than 2 Such Albums
+
+```sql
+SELECT artist_id
+FROM (
+    SELECT a.album_id, a.artist_id
+    FROM albums a
+    JOIN songs s ON a.album_id = s.album_id
+    GROUP BY a.album_id, a.artist_id
+    HAVING AVG(s.duration) > 200
+) AS album_stats
+GROUP BY artist_id
+HAVING COUNT(DISTINCT album_id) > 2;
+```
+
+---
+
+### 3. Get Artist Names (Optional)
+
+If you want to return artist names, join with the `artists` table:
+
+```sql
+SELECT ar.name
+FROM (
+    SELECT a.album_id, a.artist_id
+    FROM albums a
+    JOIN songs s ON a.album_id = s.album_id
+    GROUP BY a.album_id, a.artist_id
+    HAVING AVG(s.duration) > 200
+) AS album_stats
+JOIN artists ar ON album_stats.artist_id = ar.artist_id
+GROUP BY ar.artist_id, ar.name
+HAVING COUNT(DISTINCT album_stats.album_id) > 2;
+```
+
+---
+
+### Explanation
+
+- **albums**: Contains album-level info (`album_id`, `artist_id`).
+- **songs**: Contains individual songs (`song_id`, `album_id`, `duration` in seconds).
+- The subquery filters albums where the average duration of songs is > 200 seconds.
+- The outer query groups by `artist_id` and counts how many such albums they have.
+- `HAVING COUNT(...) > 2` ensures only artists with more than 2 such albums are returned.
+
+Let me know if your schema is different (e.g., table or column names).
