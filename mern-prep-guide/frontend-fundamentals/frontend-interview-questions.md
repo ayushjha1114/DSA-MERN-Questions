@@ -3015,3 +3015,299 @@ This:
 - Allows styles and fonts from Google Fonts
 - Allows inline images (like `data:image/png;base64,...`)
 - Blocks embedded content (`object-src none`)
+
+
+
+## `box-sizing: border-box` in CSS
+
+`box-sizing: border-box` is a CSS property that changes how the total width and height of an element are calculated.
+
+---
+
+### 🧠 Default Behavior: `content-box`
+
+- **Width/height** = content only.
+- **Padding** and **border** are added *outside* the specified width/height.
+
+---
+
+### ✅ `border-box` Behavior
+
+- **Padding** and **border** are *included* within the total width/height.
+
+---
+
+### 📊 Comparison
+
+| Property                | `content-box` (default)                                   | `border-box`                        |
+|-------------------------|----------------------------------------------------------|-------------------------------------|
+| Width = `200px`         | Content: 200px + padding + border = bigger box           | Total width including padding & border = 200px |
+| Easy layout?            | ❌ Harder                                                | ✅ Easier to manage sizes            |
+
+---
+
+### 🧪 Example
+
+**HTML**
+```html
+<div class="content-box">Content Box</div>
+<div class="border-box">Border Box</div>
+```
+
+**CSS**
+```css
+div {
+    width: 200px;
+    padding: 20px;
+    border: 5px solid black;
+    margin-bottom: 20px;
+}
+
+.content-box {
+    box-sizing: content-box; /* default */
+    background: lightcoral;
+}
+
+.border-box {
+    box-sizing: border-box;
+    background: lightgreen;
+}
+```
+
+---
+
+### 📷 Visual Outcome
+
+- `.content-box`: total width = 200 + 40 (padding) + 10 (border) = **250px**
+- `.border-box`: total width = **200px** (content area = 200 − 40 − 10 = **150px**)
+
+---
+
+### ✅ Why Use `border-box`?
+
+- Prevents layout issues.
+- Easier sizing: what you set as width is what you get.
+- Recommended in modern CSS — often used as a global default:
+
+```css
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+```
+
+
+# Differences Between `rem`, `em`, and `vh` in CSS
+
+CSS units for sizing behave differently:
+
+## 1. `rem` (Root EM)
+- **Relative to:** Root (`<html>`) element’s font-size
+- **Default:** Usually `1rem = 16px` (if not changed)
+
+**Example:**
+```css
+html {
+    font-size: 16px;
+}
+h1 {
+    font-size: 2rem;  /* 2 * 16px = 32px */
+}
+```
+**Use case:**  
+Consistent sizing across components; easy UI scaling by changing root font-size.
+
+---
+
+## 2. `em`
+- **Relative to:** Parent element’s font-size
+
+**Example:**
+```css
+.parent {
+    font-size: 20px;
+}
+.child {
+    font-size: 1.5em;  /* 1.5 * 20px = 30px */
+}
+```
+**Important:**  
+`em` is context-sensitive; nested elements multiply up:
+```css
+.outer { font-size: 20px; }
+.inner { font-size: 1.5em; }     /* 30px */
+.deep  { font-size: 1.5em; }     /* 1.5 * 30 = 45px */
+```
+**Use case:**  
+Local scaling (e.g., padding or font-size relative to parent).
+
+---
+
+## 3. `vh` (Viewport Height)
+- **Relative to:** 1% of the viewport’s height
+
+**Example:**
+```css
+.full-screen {
+    height: 100vh;  /* Fills full browser height */
+}
+```
+`1vh = 1%` of visible screen height.  
+Useful for responsive layouts.
+
+**Use case:**  
+Hero sections, full-screen components, mobile adaptive UI.
+
+---
+
+## Quick Comparison Table
+
+| Unit | Based On                | Inherits Context? | Example Use                |
+|------|------------------------|-------------------|---------------------------|
+| rem  | Root `<html>` font-size| ❌ No             | Typography scale system    |
+| em   | Parent font-size        | ✅ Yes            | Relative padding/margin    |
+| vh   | Viewport height (1%)    | ❌ No             | Full-screen layouts        |
+
+---
+
+# CSS Grid Layout
+
+A powerful 2D layout system for web layouts with rows and columns.
+
+## Key Concepts
+
+### 1. Grid Container
+Turn a container into a grid:
+```css
+display: grid;
+```
+
+### 2. Grid Items
+All direct children of a grid container become grid items.
+
+---
+
+## Basic Example
+
+**HTML**
+```html
+<div class="grid">
+    <div>1</div>
+    <div>2</div>
+    <div>3</div>
+</div>
+```
+
+**CSS**
+```css
+.grid {
+    display: grid;
+    grid-template-columns: 100px 100px 100px; /* 3 columns */
+    gap: 10px; /* space between items */
+}
+```
+
+**Result:**
+```
++----+----+----+
+| 1  | 2  | 3  |
++----+----+----+
+```
+
+---
+
+## Grid Sizing
+
+- **`grid-template-columns` & `grid-template-rows`:**  
+    Define columns/rows and their sizes:
+    ```css
+    grid-template-columns: 1fr 2fr 1fr; /* fraction-based */
+    grid-template-rows: 100px auto;     /* fixed and flexible */
+    ```
+    - `fr` = fractional unit of remaining space
+    - Mix fixed sizes (`px`, `em`, etc.) and flexible (`fr`, `auto`)
+
+---
+
+## Grid Gap
+
+```css
+gap: 20px;         /* both row and column gap */
+row-gap: 10px;
+column-gap: 30px;
+```
+
+---
+
+## Positioning Items
+
+```css
+.item {
+    grid-column: 1 / 3;  /* span columns 1 to 2 */
+    grid-row: 2 / 4;     /* span rows 2 to 3 */
+}
+```
+Or use `span`:
+```css
+.item {
+    grid-column: span 2;
+}
+```
+
+---
+
+## Auto Placement vs Manual Placement
+
+- Grid auto-places items by default in rows (left to right)
+- Manually place with `grid-row` and `grid-column`
+
+---
+
+## Repeat Function
+
+```css
+grid-template-columns: repeat(3, 1fr); /* Same as: 1fr 1fr 1fr */
+```
+
+---
+
+## Responsive Example
+
+```css
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+```
+- `auto-fit` + `minmax()` = responsive, adaptive grid cells
+
+---
+
+## Area Naming
+
+```css
+grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer";
+```
+Assign areas:
+```css
+.header  { grid-area: header; }
+.sidebar { grid-area: sidebar; }
+.main    { grid-area: main; }
+.footer  { grid-area: footer; }
+```
+
+---
+
+## Why Use CSS Grid?
+
+| Feature           | Flexbox         | Grid                      |
+|-------------------|----------------|---------------------------|
+| 1D vs 2D layout   | One axis only  | Rows + Columns (2D)       |
+| Item positioning  | Based on flow  | Exact placement           |
+| Responsive UI     | Good           | Great with auto layout    |
+| Complex layouts   | Hard           | Easy                      |

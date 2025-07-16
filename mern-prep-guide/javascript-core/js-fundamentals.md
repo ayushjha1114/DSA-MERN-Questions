@@ -333,6 +333,12 @@ console.log(session.#token);     // ❌ Error: Private field
 
 `this` refers to the execution context of a function — the object that is “calling” or “owning” the function at runtime.
 
+in other words -
+
+The this keyword refers to the object that is executing the current function.
+
+But the value of this depends on how the function is called, not where it’s defined.
+
 ---
 
 ### 🧠 How `this` is Determined — Rules by Context
