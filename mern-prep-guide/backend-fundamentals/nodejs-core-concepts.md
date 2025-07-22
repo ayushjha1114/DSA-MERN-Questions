@@ -3219,3 +3219,211 @@ To batch and apply backpressure for streamed CSV upload to Kafka:
 - Flush in batches.
 - Pause the upload stream if buffer is full or Kafka lags.
 - Resume only when safe to continue.
+
+
+## `Promise.race()`: First-Wins Logic
+
+`Promise.race()` is useful when you want to perform "first-wins" logic — meaning you only care about the first promise that settles (whether it resolves or rejects), and want to ignore the rest.
+
+---
+
+### ✅ Syntax
+
+```js
+Promise.race([promise1, promise2, promise3])
+```
+Returns a new promise that settles as soon as the first input promise settles (either fulfilled or rejected).
+
+---
+
+### 🔥 Real-World Use Cases of `Promise.race()`
+
+#### 1. Timeout for Slow API Requests
+
+You don’t want your app to wait forever for an API. Race it against a timeout!
+
+```js
+const fetchWithTimeout = (url, timeout = 3000) => {
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout!")), timeout)
+    );
+
+    return Promise.race([
+        fetch(url),
+        timeoutPromise
+    ]);
+};
+
+fetchWithTimeout('https://api.example.com/data')
+    .then(res => res.json())
+    .then(console.log)
+    .catch(console.error);
+```
+
+---
+
+#### 2. Load First-Responding Mirror Server
+
+You have 3 identical servers. Return data from the fastest one:
+
+```js
+const mirrors = [
+    fetch('https://server1.example.com/data'),
+    fetch('https://server2.example.com/data'),
+    fetch('https://server3.example.com/data')
+];
+
+Promise.race(mirrors)
+    .then(res => res.json())
+    .then(console.log)
+    .catch(console.error);
+```
+
+## `Promise.any()`
+
+Use `Promise.any()` when you want the **first successfully resolved promise** — and you don't care if some others fail.
+
+### ✅ Syntax
+
+```js
+Promise.any([promise1, promise2, promise3])
+```
+
+- **Resolves** with the value of the first fulfilled promise.
+- **Rejects** only if *all* promises reject (with an `AggregateError`).
+
+---
+
+### 🔥 Real-World Use Cases
+
+#### 1. First Success from Redundant Services
+
+Query multiple mirror servers or CDN endpoints — return the first success:
+
+```js
+const sources = [
+    fetch("https://cdn1.example.com/resource"),
+    fetch("https://cdn2.example.com/resource"),
+    fetch("https://cdn3.example.com/resource")
+];
+
+Promise.any(sources)
+    .then(res => res.json())
+    .then(console.log)
+    .catch(err => console.error("All sources failed:", err));
+```
+
+#### 2. Search Multiple Providers (e.g., Autocomplete)
+
+Query multiple 3rd-party APIs for the fastest working one.
+
+```js
+Promise.any([
+    fetchGoogleSuggestions(),
+    fetchBingSuggestions(),
+    fetchDuckDuckGoSuggestions()
+])
+    .then(showSuggestions)
+    .catch(() => showError("No search service available."));
+```
+
+#### 3. Faster Image/Video Load
+
+Try loading from multiple locations or formats — whichever works first:
+
+```js
+Promise.any([
+    loadImage("image.webp"),
+    loadImage("image.jpg"),
+    loadImage("image.png")
+])
+    .then(showImage)
+    .catch(() => showFallbackImage());
+```
+
+---
+
+## `Promise.allSettled()`
+
+Use `Promise.allSettled()` when you want **all promises to complete**, regardless of success or failure, and then inspect the outcome of each one.
+
+### ✅ Syntax
+
+```js
+Promise.allSettled([promise1, promise2, promise3])
+```
+
+- Returns a promise that resolves after all input promises settle.
+- The result is an array of objects:
+    - `{ status: "fulfilled", value: ... }`
+    - `{ status: "rejected", reason: ... }`
+
+---
+
+### 📦 Example
+
+```js
+const promises = [
+    Promise.resolve("✅ Success"),
+    Promise.reject("❌ Error"),
+    new Promise(res => setTimeout(() => res("✅ Delayed Success"), 1000))
+];
+
+Promise.allSettled(promises).then(results => {
+    results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+            console.log(`Promise ${index} succeeded with`, result.value);
+        } else {
+            console.log(`Promise ${index} failed with`, result.reason);
+        }
+    });
+});
+```
+
+---
+
+### 🚀 Real-World Use Cases
+
+#### 1. Show Partial Results (e.g., dashboard widgets)
+
+Fetch data for multiple widgets. Show what succeeded, report what failed:
+
+```js
+const widgetPromises = [
+    fetch("/api/sales"),
+    fetch("/api/users"),
+    fetch("/api/analytics")
+];
+
+Promise.allSettled(widgetPromises).then(responses => {
+    responses.forEach((res, i) => {
+        if (res.status === "fulfilled") {
+            renderWidget(i, res.value);
+        } else {
+            showWidgetError(i, res.reason);
+        }
+    });
+});
+```
+
+#### 2. Retry Logic for Failed APIs
+
+Collect all failures and retry only the failed ones:
+
+```js
+Promise.allSettled([
+    fetch("/api/one"),
+    fetch("/api/two"),
+    fetch("/api/three")
+])
+    .then(results => {
+        const failed = results
+            .map((res, i) => ({ ...res, index: i }))
+            .filter(res => res.status === "rejected");
+
+        failed.forEach(({ index }) => {
+            console.log(`Retrying API ${index}`);
+            // retryFetch(index)...
+        });
+    });
+```

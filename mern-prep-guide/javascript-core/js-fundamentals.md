@@ -1048,3 +1048,257 @@ const usernameLength = user?.name?.length ?? 0; // Safe, returns 0
 const guaranteedLength = user!.name!.length;    // Unsafe: may throw at runtime
 ```
 
+
+# JavaScript-  Call by Value vs Call by Reference
+
+In JavaScript, the terms call by value and call by reference describe how arguments are passed to functions. Understanding the difference is key to avoiding unexpected behavior when working with variables and objects.
+
+## ✅ 1. Call by Value (📦 Primitives)
+
+When you pass a primitive value (like number, string, boolean, null, undefined, symbol, or bigint) to a function, JavaScript passes a copy of the value.
+
+🔹 Changes inside the function do NOT affect the original value.
+
+🔹 **Example:**
+
+```javascript
+let a = 10;
+
+function modify(x) {
+  x = x + 5;
+  console.log("Inside function:", x); // 15
+}
+
+modify(a);
+console.log("Outside function:", a); // 10
+```
+
+✅ `a` is unchanged outside the function because only a copy was passed.
+
+## ✅ 2. Call by Reference (📦 Objects, Arrays, Functions)
+
+When you pass an object (including arrays or functions), JavaScript passes a reference to the object in memory (but not the reference variable itself — the reference is passed by value).
+
+🔹 Changes to object properties inside the function DO affect the original object.
+
+🔹 **Example:**
+
+```javascript
+let obj = { name: "Alice" };
+
+function modify(o) {
+  o.name = "Bob";
+}
+
+modify(obj);
+console.log(obj.name); // "Bob"
+```
+
+✅ `obj.name` changed because the function received a reference to the object.
+
+## ⚠️ Important Clarification
+
+JavaScript is always "call by value" under the hood.
+
+But:
+- For primitives, it passes the actual value.
+- For objects, it passes the value of the reference (which points to the object in memory), so modifying the object's contents works, but reassigning the reference does not affect the original.
+
+## 🔍 Example of Confusion:
+
+```javascript
+let obj = { a: 1 };
+
+function reassign(o) {
+  o = { a: 2 }; // Reassigning the reference
+}
+
+reassign(obj);
+console.log(obj.a); // 1 ❌ not changed
+```
+
+Reassigning `o` does not change `obj` because the reference itself was copied (not shared).
+
+---
+
+# Operating Systems Concepts
+
+## What is the difference between concurrency and parallelism?
+
+**Answer:** Concurrency is about dealing with multiple tasks at the same time, while parallelism is about executing multiple tasks simultaneously.
+
+### Key Differences:
+
+- **Concurrency** is about managing multiple tasks and switching between them quickly.
+- **Parallelism** is about actually executing multiple tasks at the same time.
+- **Concurrency** can be achieved in a single-core processor through task switching.
+- **Parallelism** requires multiple cores or processors to execute tasks simultaneously.
+
+### Example:
+A web server handling multiple requests concurrently, but a multi-core processor executing tasks in parallel.
+
+
+# JavaScript Prototypes Complete Guide
+
+## 🧠 1. Why Is prototype Created in JavaScript?
+
+### 🔧 JavaScript is Prototype-Based, Not Class-Based
+
+Before ES6 classes (`class Foo {}`), JavaScript was built on prototypes — a flexible way to do inheritance.
+
+Imagine you have 100 user objects. If you define the same method like `.sayHi()` inside each one, memory will be wasted:
+
+```javascript
+function User(name) {
+  this.name = name;
+  this.sayHi = function () {
+    console.log("Hi, I'm " + this.name);
+  };
+}
+```
+
+Every instance will have its own copy of `sayHi` — not efficient.
+
+### ✅ Enter: prototype
+
+By putting shared methods on `User.prototype`, all instances reuse the same function:
+
+```javascript
+function User(name) {
+  this.name = name;
+}
+
+User.prototype.sayHi = function () {
+  console.log("Hi, I'm " + this.name);
+};
+
+const u1 = new User("Alice");
+const u2 = new User("Bob");
+
+u1.sayHi(); // ✅ same method from prototype
+```
+
+**Benefits:**
+- ✔️ Reduces memory usage
+- ✔️ Enables shared behavior across instances
+- ✔️ Forms the base for inheritance
+
+## 🧱 2. What Is `__proto__` and `prototype`?
+
+| Term | What It Means |
+|------|---------------|
+| `prototype` | A property of constructor functions (like `User.prototype`) where shared methods/properties live |
+| `__proto__` | A property of every object that links to its prototype (internal delegation chain) |
+
+### Visualization:
+
+```javascript
+function User() {}
+let user1 = new User();
+
+console.log(user1.__proto__ === User.prototype); // true
+console.log(User.prototype.__proto__ === Object.prototype); // true
+```
+
+**Chain structure:**
+```javascript
+user1 → User.prototype → Object.prototype → null
+```
+
+## 🔗 3. What Is Prototype Chaining?
+
+When you try to access a property on an object:
+
+1. JS looks on the object
+2. If not found, it goes to `__proto__` (aka `Object.getPrototypeOf(obj)`)
+3. Then continues up the chain
+
+### Example:
+
+```javascript
+const animal = {
+  eats: true
+};
+
+const rabbit = {
+  jumps: true,
+  __proto__: animal
+};
+
+console.log(rabbit.jumps); // from rabbit
+console.log(rabbit.eats);  // from animal via prototype chain
+```
+
+## 🧪 4. What Is Prototype Pollution?
+
+Prototype pollution is a security vulnerability where a malicious user modifies the `Object.prototype`, affecting all objects.
+
+### Example of dangerous pollution:
+
+```javascript
+let payload = JSON.parse('{ "__proto__": { "isAdmin": true } }');
+
+console.log({}.isAdmin); // true — polluted all objects
+```
+
+This can happen in apps that merge deeply nested objects (like `lodash.merge`) without proper validation.
+
+**🧨 Result:** unexpected behavior, security issues (bypass auth checks, SSRF, etc.)
+
+## ✅ 5. Is It Really Important to Know This?
+
+**Yes** — especially if:
+
+| Scenario | Why It Matters |
+|----------|----------------|
+| You're using class inheritance | Under the hood, `class` is still prototype-based |
+| You're debugging unexpected method behavior | Methods may be inherited from a prototype |
+| You're writing libraries or SDKs | Prototypes = memory efficiency & inheritance in shared objects |
+| You're using/patching 3rd-party objects | Avoid `Object.prototype` modifications |
+| You're a backend dev using Node.js | Node uses prototype-based objects (streams, buffers, etc.) |
+| You're working with lodash, express, etc. | Deep merge, middleware chains all need prototype safety |
+
+## ES6+ Standard Way to Handle Prototypes
+
+In ES6 (ECMAScript 2015), the standardized way to access or set an object's prototype is through:
+
+- `Object.getPrototypeOf(obj)` → replaces `obj.__proto__`
+- `Object.setPrototypeOf(obj, prototype)` → replaces `obj.__proto__ = something`
+
+### 🔁 Why?
+
+Because `__proto__` was originally a non-standard, browser-specific feature (from early Netscape days). It was later standardized only for backward compatibility, but it's considered discouraged in production code.
+
+### ✅ Modern (ES6+) Way
+
+```javascript
+const car = { wheels: 4 };
+const tesla = { model: "X" };
+
+// ✅ Preferred in ES6+
+Object.setPrototypeOf(tesla, car);
+console.log(Object.getPrototypeOf(tesla)); // { wheels: 4 }
+console.log(tesla.wheels); // 4, inherited via prototype
+```
+
+### 🚫 Old Way (Still Works, but Not Recommended)
+
+```javascript
+tesla.__proto__ = car;
+console.log(tesla.wheels); // 4
+```
+
+### 🔒 Why `__proto__` is discouraged?
+
+- It's slow (due to dynamic prototype mutation)
+- It breaks optimizations in JavaScript engines
+- It's not future-proof for production-grade apps
+
+## ✅ Summary
+
+| Feature | Purpose | Status |
+|---------|---------|--------|
+| `__proto__` | Access/set prototype | Deprecated (but supported) |
+| `Object.getPrototypeOf` | Access prototype | ✅ Standard & Recommended |
+| `Object.setPrototypeOf` | Set prototype | ✅ Standard & Recommended |
+

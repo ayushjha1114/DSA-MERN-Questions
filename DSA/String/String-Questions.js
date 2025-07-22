@@ -360,7 +360,17 @@ console.log(mergeIntervals([[1,4], [0,4]])); // [ [ 1, 4 ] ]
 
 //----------------------------------------------------------------------------------------------
 
-//
+// GENERATE RANDOM UNIQUE STRING
+let char = 'QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm1234567890';
+
+let str = '';
+
+for (let i = 0; i < 6; i++) { // ADJUST THE LENGTH OF STRING ACCORDINGLY
+    const index = Math.floor(Math.random() * char.length)
+    str += char[index]
+}
+
+console.log(str)
 
 
 

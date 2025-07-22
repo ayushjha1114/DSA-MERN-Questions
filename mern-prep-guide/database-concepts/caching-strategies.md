@@ -307,3 +307,131 @@ await redis.lpush('events', JSON.stringify(eventData));
 | Cache Type | Redis (GET-first)         | Redis/Kafka (write-first, async DB) |
 | Priority   | Low latency for frequent reads | High throughput, DB write protection |
 | Eviction   | LRU / TTL                 | Rarely evict (until batch flush)     |
+
+
+
+# Caching Interview Guide for Tech Lead/Senior Backend Roles
+
+## "Tell me about your experience with caching"
+
+### ✅ Structured Answer:
+"I've extensively used caching across various layers — from in-memory caches like Redis and Node.js memory stores to HTTP-level and DB-level caching — to improve performance, reduce latency, and manage load in high-traffic systems."
+
+### 💡 Key Points to Cover:
+
+## 🛒 Example: E-commerce Platform (Amazon-like)
+
+### Context:
+We're building a Node.js-based backend with React frontend. The system handles millions of product views, personalized recommendations, and flash sale pricing. Performance and scalability are critical.
+
+---
+
+## ✅ 1. In-memory Caching (Redis, LRU)
+
+### 🔸 Use Case:
+Caching user sessions, category product lists, and site-wide settings (banners, shipping zones, feature flags).
+
+### 🧩 Example:
+
+```typescript
+// Node.js backend (Express + Redis)
+const redis = require('redis');
+const client = redis.createClient();
+const CACHE_TTL = 300; // 5 mins
+
+app.get('/api/categories/:id/products', async (req, res) => {
+  const cacheKey = `category_products:${req.params.id}`;
+  const cachedData = await client.get(cacheKey);
+  
+  if (cachedData) return res.json(JSON.parse(cachedData));
+
+  const products = await db.getProductsByCategory(req.params.id); // expensive query
+  await client.setEx(cacheKey, CACHE_TTL, JSON.stringify(products));
+
+  return res.json(products);
+});
+```
+
+### ✅ Result:
+- Reduced DB load by ~80% during peak traffic
+- TTL ensured freshness, especially during flash sales or category changes
+
+---
+
+## ✅ 2. HTTP Caching (CDN + Headers)
+
+### 🔸 Use Case:
+Caching product images, category pages, and product detail pages on edge/CDN (Cloudflare, Akamai).
+
+### 🧩 Example:
+Set HTTP response headers in Nginx or Express:
+
+```http
+Cache-Control: public, max-age=86400
+ETag: "abc123"
+```
+
+### ✅ Result:
+- 90% of static assets (images, JS bundles) were served directly from CDN
+- Reduced origin traffic and latency by 500ms+ for global users
+
+---
+
+## ✅ 3. Database Query Caching (Redis Query Cache)
+
+### 🔸 Use Case:
+Heavy dashboard queries like "Top-selling products last 7 days" or "Revenue by region" for admin dashboards.
+
+### 🧩 Example:
+
+```typescript
+const cacheKey = 'top-products:7d';
+
+const cached = await redis.get(cacheKey);
+if (cached) return JSON.parse(cached);
+
+const topProducts = await db.query(`
+  SELECT product_id, COUNT(*) AS total_sold
+  FROM orders
+  WHERE created_at > NOW() - INTERVAL '7 days'
+  GROUP BY product_id
+  ORDER BY total_sold DESC
+  LIMIT 10
+`);
+
+await redis.setEx(cacheKey, 300, JSON.stringify(topProducts)); // 5 min TTL
+return topProducts;
+```
+
+### ✅ Result:
+- Reduced expensive aggregations (scan over 10M rows)
+- Ensured freshness via TTL + cache invalidation on new orders using Redis pub/sub
+
+---
+
+## ✅ 4. Application-Level Memoization (LRU Cache)
+
+### 🔸 Use Case:
+Memoizing dynamic pricing logic for users during high-load sale campaigns (100k+ concurrent users).
+
+### 🧩 Example:
+
+```typescript
+// Node.js using lru-cache
+const LRU = require('lru-cache');
+const priceCache = new LRU({ max: 5000, ttl: 10 * 1000 }); // 10s
+
+function getDynamicPrice(userId, productId) {
+  const key = `${userId}:${productId}`;
+  const cached = priceCache.get(key);
+  if (cached) return cached;
+
+  const price = calculatePrice(userId, productId); // CPU-heavy sync function
+  priceCache.set(key, price);
+  return price;
+}
+```
+
+### ✅ Result:
+- Cut pricing function calls by 80% under flash sale stress
+- Preserved 60fps performance in React frontend by avoiding lag on pricing fetches

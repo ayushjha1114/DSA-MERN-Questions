@@ -540,279 +540,352 @@ This forces React to render immediately after each update.
 | 5    | New tree built → diffed → DOM updated efficiently |
 
 
-# Partitioning vs Sharding in Databases
 
-Partitioning and sharding are techniques to manage large datasets for performance, scalability, and maintainability. Here’s a concise guide for production-grade systems.
+# Reactjs internal working(Refined Version)
+
+React uses a **Fiber architecture** where each component or DOM element is represented by a *Fiber node* in a *Fiber tree*.
+
+Each Fiber node contains:
+- **type** (e.g., `div`, component)
+- **props**, **state**, **effect list**
+- **hooks info** (for functional components)
+- **pointers**: to child, sibling, and return (parent)
 
 ---
 
-## 🔹 Partitioning
+## 🔁 React's Render Cycle — 3 Key Phases
 
-Partitioning divides a large table into smaller, manageable pieces (partitions) while retaining the logical structure of a single table.
+### 1. 🧠 Render Phase (a.k.a. Reconciliation)
+- React builds a **Work-In-Progress (WIP) Fiber tree**.
+- It compares the WIP tree to the **Current Fiber tree** (previous).
+- Based on this diff:
+    - Marks fibers with `"placement"`, `"update"`, or `"deletion"`.
+- ❌ **No DOM is updated here.**
+- ✅ This phase **can be paused and resumed** (in concurrent rendering).
 
-**Benefits:**
-- **Faster queries:** Reduces I/O by scanning only relevant partitions.
-- **Easier maintenance:** Archive/drop old partitions.
-- **Parallel queries:** Queries can run across partitions.
-- **Optimized indexes:** Indexes are smaller and more efficient.
+### 2. ⚙️ Commit Phase
+- React takes the changes calculated in the render phase...
+- And **performs DOM mutations** (insert, update, delete).
+- Also runs:
+    - `useEffect`
+    - `componentDidMount`
+    - ref attachment
+- ❌ **Not interruptible** — must complete once started.
 
-### Types of Partitioning
+### 3. ⏳ Idle Phase / Scheduling
+- Not an official "phase", but important in Concurrent Mode.
+- React may:
+    - **Yield rendering work** to allow the browser to remain responsive.
+    - Use **scheduling priority** to manage urgent vs non-urgent updates.
+- Internally uses a **scheduler** to decide when to re-render parts of the UI.
 
-| Type                  | Description                       | Example                                      |
-|-----------------------|-----------------------------------|----------------------------------------------|
-| Range Partitioning    | By range of column values         | `created_at` monthly partitions              |
-| List Partitioning     | By discrete values                | Partition by country (`'US'`, `'IN'`)        |
-| Hash Partitioning     | By hash function on a column      | Partition by `user_id % 4`                   |
-| Composite Partitioning| Combines methods                  | Range + hash for multi-tenant cases          |
 
-### Example: PostgreSQL Range Partitioning
 
-```sql
--- Step 1: Create partitioned table
-CREATE TABLE user_logs (
-    id SERIAL PRIMARY KEY,
-    user_id INT,
-    activity TEXT,
-    created_at DATE
-) PARTITION BY RANGE (created_at);
+# 🔍 Does every Fiber node represent a React component?
 
--- Step 2: Create partitions
-CREATE TABLE user_logs_2024_01 PARTITION OF user_logs
-    FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
-CREATE TABLE user_logs_2024_02 PARTITION OF user_logs
-    FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
--- ...more partitions
+**Mostly yes, but with important nuances:**
 
--- Step 3: Insert/query (no change in logic)
-INSERT INTO user_logs (user_id, activity, created_at)
-VALUES (1, 'login', '2024-01-25');
+- Every React element in your component tree typically has a corresponding Fiber node.
+- This includes both components and host elements (like `<div>`, `<span>`, etc.).
 
-SELECT * FROM user_logs
-WHERE created_at BETWEEN '2024-01-01' AND '2024-02-01';
+---
+
+## 🧠 What is a Fiber Node?
+
+A **Fiber node** is a JavaScript object that represents:
+
+- A unit of work in React's render process.
+- A node in the React virtual DOM tree.
+
+---
+
+## 🏗️ Structure of a Fiber Node
+
+Each Fiber has:
+
+- **type**: What to render (e.g., `MyComponent`, `'div'`)
+- **tag**: Type of fiber (`FunctionComponent`, `HostComponent`, etc.)
+- **return**: Pointer to the parent
+- **child**, **sibling**: Tree structure
+- **stateNode**: Actual instance (DOM node or class component)
+- **memoizedProps**, **memoizedState**: Current props and state
+
+---
+
+## 🌳 Example
+
+```jsx
+function App() {
+    return (
+        <div>
+            <Header />
+            <Content />
+        </div>
+    );
+}
 ```
-_PostgreSQL scans only relevant partitions (partition pruning)._
 
-### Production Best Practices
+This generates a fiber tree:
 
-| Concern                | Recommendation                                 |
-|------------------------|------------------------------------------------|
-| Query performance      | Always filter by partition key                 |
-| Auto partition mgmt    | Automate creation/rotation (cron/app logic)    |
-| Retention/archiving    | Drop old partitions for instant purging        |
-| Indexing               | Index only needed columns per partition        |
-| Monitoring             | Track bloat, query plans, partition sizes      |
-| Migrations             | Plan changes during downtime or with tools     |
+```
+App (FunctionComponent)
+└── div (HostComponent)
+        ├── Header (FunctionComponent)
+        └── Content (FunctionComponent)
+```
 
-### Tools & Libraries
+Each of:
 
-- **pg_partman:** Automatic partition maintenance for PostgreSQL
-- **TimescaleDB:** Advanced time-series partitioning (hypertables)
-- **Custom logic:** For NoSQL/ORMs, partitioning at app level
+- `App`
+- `div`
+- `Header`
+- `Content`
 
-### Partitioning in NoSQL
+gets its own fiber node.
 
-- **MongoDB:** Sharding (horizontal partitioning)
-- **Cassandra:** Partition key defines data locality
-- **DynamoDB:** Partition key + sort key
 
----
+# How React Fiber Stores Hooks Internally
 
-## 🔹 Sharding
-
-Sharding splits data horizontally across multiple databases or machines (shards), each holding a subset of the data. Used when partitioning a single table isn’t enough.
-
-**Key Points:**
-- **Scales beyond a single server**
-- **Each shard is a separate DB/server**
-- **Requires routing logic in the app**
-
-### Sharding vs Partitioning
-
-| Feature         | Partitioning                | Sharding                       |
-|-----------------|----------------------------|--------------------------------|
-| Level           | Within one DB instance      | Across multiple DBs/servers    |
-| Goal            | Performance, manageability  | Scalability, capacity          |
-| Maintenance     | Easier                      | More complex                   |
-| Query engine    | Centralized                 | Often needs routing logic      |
-
-### Example: User-Based Sharding
-
-Suppose a social app with 100M users:
-
-- Users 1–10M → `user_db_1`
-- Users 10M–20M → `user_db_2`
-- ...each DB on a separate server
-
-#### Sharding Steps
-
-1. **Choose a Shard Key**
-   - Distributes data evenly
-   - Matches query patterns
-   - Is immutable
-   - _Good keys:_ `user_id`, `tenant_id`, `region`
-   - _Bad keys:_ `email`, `timestamp`
-
-2. **Set Up Multiple Databases**
-   ```bash
-   user_db_1 (db1.server.com)
-   user_db_2 (db2.server.com)
-   ```
-
-3. **Routing Layer in App**
-   ```typescript
-   function getShardForUser(userId) {
-     const numShards = 4;
-     return `user_db_${userId % numShards}`;
-   }
-   // Use a connection pool per shard
-   ```
-
-4. **Querying/Writing**
-   ```typescript
-   const db = getShardForUser(userId);
-   await db.query("SELECT * FROM users WHERE id = $1", [userId]);
-   ```
-
-### Sharding Best Practices
-
-| Concern         | Solution                                 |
-|-----------------|------------------------------------------|
-| Rebalancing     | Use shard map, re-shard gradually        |
-| Fault tolerance | Redundancy per shard (replication)       |
-| Monitoring      | Track load per shard                     |
-| Backups         | Independent backups per shard            |
-| Security        | Encrypt keys, isolate DBs                |
-| Deployment      | Use Terraform/K8s for scaling            |
+React Fiber architecture stores hook state (like `useState`, `useEffect`, `useMemo`, `useCallback`, and `useRef`) inside each component's Fiber node, specifically in a linked list attached to the `memoizedState` field.
 
 ---
 
-## 🔚 Summary
+### ⚛️ React Fiber Refresher
 
-- **Partitioning:** Breaks large tables into smaller ones for faster queries and easier management.
-- **Sharding:** Splits data across multiple DBs/servers for horizontal scaling.
+Each component instance is represented by a Fiber node:
 
-**Production tips:**
-- Use range partitioning for time-series logs.
-- Automate partition/shard rotation.
-- Monitor performance and bloat.
-- Plan schema, indexes, and routing logic carefully.
-- Avoid cross-shard operations.
+```js
+FiberNode = {
+    type: FunctionComponent,
+    stateNode: component instance,
+    memoizedState: hook list (linked list),
+    alternate: previous Fiber (for diffing),
+    // ...other fields
+}
+```
 
-
-## Partitioning vs Sharding: Key Differences
-
-The major difference between partitioning and sharding lies in where and how the data is split.
-
-### 🔍 At a Glance
-
-| Feature           | Partitioning                                                                 | Sharding                                                      |
-|-------------------|------------------------------------------------------------------------------|---------------------------------------------------------------|
-| **Definition**    | Dividing a table into smaller parts within the same database instance         | Dividing the data across multiple databases or servers        |
-| **Goal**          | Performance & manageability                                                  | Scalability & system capacity                                 |
-| **Data Location** | All partitions are on the same server / DB instance                          | Shards live on different servers / DBs                        |
-| **Query Handling**| Handled internally by the DBMS (transparent)                                 | App or middleware must route queries to the right shard       |
-| **Indexing**      | Indexing can be partition-specific                                           | Each shard has its own indexes                                |
-| **Cross-table joins** | Easy, within one DB                                                      | Hard, requires merging across shards                          |
-| **Failure Isolation** | Not isolated; all partitions go down if DB crashes                       | Fault is isolated per shard                                   |
-| **Scalability**   | Limited by single machine                                                    | Scales horizontally across machines                           |
+- `memoizedState` holds a linked list of hook objects, each storing info for a specific hook (`useState`, `useEffect`, etc.).
 
 ---
 
-### 🎯 Use Cases
+### 🧠 Example: How Hooks Are Stored
 
-#### ✅ Use Partitioning When:
-- You're dealing with very large tables (e.g. logs, events, transactions)
-- You need to archive old data easily
-- You want to optimize queries by date, region, etc.
-- You want to improve vacuuming/performance in PostgreSQL
-- You're not yet hitting the resource limits of your database server
+Suppose you have a component using several hooks:
 
-**Example:**  
-A financial app stores millions of transaction logs — partition by `transaction_date` monthly to optimize reads & archiving.
+```jsx
+function ExampleComponent() {
+    const [count, setCount] = useState(0);                   // Hook 1
+    const valueRef = useRef(null);                           // Hook 2
+    const memoizedValue = useMemo(() => count * 2, [count]); // Hook 3
+    const memoizedFn = useCallback(() => console.log(count), [count]); // Hook 4
 
-#### ✅ Use Sharding When:
-- You’ve outgrown a single DB's CPU, RAM, or storage
-- You have billions of rows or millions of users
-- Your traffic is high enough to need multiple DB servers
-- You want fault isolation (e.g., if shard A fails, shard B is unaffected)
-- You're building a multi-tenant SaaS (e.g., each tenant in a separate shard)
+    useEffect(() => {
+        console.log("Effect ran");
+    }, [count]);                                             // Hook 5
 
-**Example:**  
-A social network with 100M users shards user data by `user_id % N`, each shard lives on a different DB server.
+    return <div>{count}</div>;
+}
+```
 
----
+#### Fiber Node Structure
 
-### 🔚 Summary
+The Fiber node for `ExampleComponent` will have its `memoizedState` field pointing to a linked list of hook objects:
 
-| Concept        | Partitioning                  | Sharding                        |
-|----------------|------------------------------|---------------------------------|
-| **Scaling**    | Vertical (within 1 DB)       | Horizontal (across DBs)         |
-| **Managed By** | Database engine              | Application or middleware       |
-| **Complexity** | Lower                        | Higher                          |
-| **Performance**| Improves local query performance | Solves data volume & traffic scaling |
+```
+FiberNode (type: ExampleComponent)
+└─ memoizedState → Hook1 → Hook2 → Hook3 → Hook4 → Hook5 → null
+```
 
----
+#### Each Hook Object (Simplified)
 
-### 🚀 Rule of Thumb
+1. **useState (Hook 1)**
+        ```js
+        {
+            memoizedState: 0, // current state value
+            queue: { pending: null, dispatch: setCount },
+            next: Hook2
+        }
+        ```
 
-> Start with partitioning. Move to sharding when you hit hardware or performance limits that partitioning can't solve.
+2. **useRef (Hook 2)**
+        ```js
+        {
+            memoizedState: { current: null }, // valueRef.current
+            next: Hook3
+        }
+        ```
 
+3. **useMemo (Hook 3)**
+        ```js
+        {
+            memoizedState: count * 2, // computed value
+            deps: [count],
+            next: Hook4
+        }
+        ```
 
+4. **useCallback (Hook 4)**
+        ```js
+        {
+            memoizedState: () => console.log(count), // memoized function
+            deps: [count],
+            next: Hook5
+        }
+        ```
 
-## Partitioning vs Sharding: Key Differences
-
-The major difference between partitioning and sharding lies in where and how the data is split.
-
-### 🔍 At a Glance
-
-| Feature            | Partitioning                                                                 | Sharding                                                      |
-|--------------------|------------------------------------------------------------------------------|---------------------------------------------------------------|
-| **Definition**     | Dividing a table into smaller parts within the same database instance         | Dividing the data across multiple databases or servers         |
-| **Goal**           | Performance & manageability                                                  | Scalability & system capacity                                 |
-| **Data Location**  | All partitions are on the same server / DB instance                          | Shards live on different servers / DBs                        |
-| **Query Handling** | Handled internally by the DBMS (transparent)                                 | App or middleware must route queries to the right shard        |
-| **Indexing**       | Indexing can be partition-specific                                           | Each shard has its own indexes                                |
-| **Cross-table joins** | Easy, within one DB                                                       | Hard, requires merging across shards                          |
-| **Failure Isolation** | Not isolated; all partitions go down if DB crashes                        | Fault is isolated per shard                                   |
-| **Scalability**    | Limited by single machine                                                    | Scales horizontally across machines                           |
-
----
-
-### 🎯 Use Cases
-
-#### ✅ Use Partitioning When:
-- Dealing with very large tables (e.g. logs, events, transactions)
-- Need to archive old data easily
-- Want to optimize queries by date, region, etc.
-- Want to improve vacuuming/performance in PostgreSQL
-- Not yet hitting the resource limits of your database server
-
-**Example:**  
-A financial app stores millions of transaction logs — partition by `transaction_date` monthly to optimize reads & archiving.
-
-#### ✅ Use Sharding When:
-- Outgrown a single DB's CPU, RAM, or storage
-- Have billions of rows or millions of users
-- Traffic is high enough to need multiple DB servers
-- Want fault isolation (e.g., if shard A fails, shard B is unaffected)
-- Building a multi-tenant SaaS (e.g., each tenant in a separate shard)
-
-**Example:**  
-A social network with 100M users shards user data by `user_id % N`, each shard lives on a different DB server.
+5. **useEffect (Hook 5)**
+        ```js
+        {
+            tag: EffectTag,
+            create: () => { console.log("Effect ran") }, // effect function
+            deps: [count],
+            destroy: undefined,
+            next: null
+        }
+        ```
 
 ---
 
-### 🔚 Summary
+### 🔁 What Happens on Re-render?
 
-| Concept        | Partitioning                  | Sharding                        |
-|----------------|------------------------------|---------------------------------|
-| **Scaling**    | Vertical (within 1 DB)        | Horizontal (across DBs)         |
-| **Managed By** | Database engine               | Application or middleware       |
-| **Complexity** | Lower                         | Higher                          |
-| **Performance**| Improves local query performance | Solves data volume & traffic scaling |
+- React creates a new "work-in-progress" Fiber node.
+- It walks the previous `memoizedState` hook list.
+- For each hook, it compares new dependencies (`deps`) with the previous ones.
+- If dependencies haven't changed, it reuses the previous `memoizedState`.
+- If dependencies changed, it recalculates and stores the new value.
 
 ---
 
-### 🚀 Rule of Thumb
+### ⚠️ Why Hook Order Matters
 
-> Start with partitioning. Move to sharding when you hit hardware or performance limits that partitioning can't solve.
+- Hooks are stored by their order of invocation, not by name or variable.
+- **Always call hooks in the same order**; never call hooks conditionally.
+- Violating the "Rules of Hooks" can cause React to mismatch hook values, leading to bugs.
+
+---
+
+**Summary:**  
+All React hooks' internal state is stored in a linked list on the Fiber node, in the order they are called. This is why the order and consistency of hook calls are critical in React function components.
+
+
+
+# 🧠 Concept: What is a Work-In-Progress (WIP) Fiber Node?
+
+When your React component re-renders (due to `setState`, props change, etc.), React **doesn’t immediately mutate the current Fiber tree**.
+
+Instead, it:
+
+1. **Clones the current Fiber tree**
+2. **Builds a new work-in-progress (WIP) tree**
+3. **Performs updates on the WIP tree**
+4. **Commits the WIP tree when done**
+
+This enables non-blocking rendering, error recovery, and more.
+
+---
+
+## 🔄 Fiber Tree Structure
+
+React maintains **two trees** for each component:
+
+```
++------------------------+           +------------------------+
+| Current Fiber Tree     | ⇄ (linked)| Work-In-Progress Tree  |
++------------------------+   via     +------------------------+
+| [rendered and shown]   | `alternate`| [updating in memory]  |
++------------------------+   field   +------------------------+
+```
+
+- Each `FiberNode` has an `.alternate` pointer linking the current and WIP nodes.
+- This is known as **Double Buffering**.
+
+---
+
+## 🔧 How React Creates Work-In-Progress Fiber
+
+Here’s a simplified implementation from React source:
+
+```js
+function createWorkInProgress(currentFiber, pendingProps) {
+    let wip = currentFiber.alternate;
+
+    if (wip === null) {
+        // No alternate exists yet → create one
+        wip = {
+            ...currentFiber,         // shallow copy
+            pendingProps,
+            alternate: currentFiber, // link back
+        };
+        currentFiber.alternate = wip;
+    } else {
+        // Reuse existing WIP
+        wip.pendingProps = pendingProps;
+    }
+
+    return wip;
+}
+```
+
+**On each re-render:**
+
+- React finds the current Fiber
+- Uses `.alternate` to get or create the WIP Fiber
+- Performs updates on the WIP
+- At commit phase, the WIP becomes the current
+
+---
+
+## 🧪 Visualization: One Component Re-render
+
+Suppose you start with:
+
+```
+Current Tree:
+<App> (Fiber: A)
+ └── <Counter> (Fiber: B)
+```
+
+Each node has:
+
+- **Fiber B:**
+    - `memoizedState: 0`
+    - `alternate: null`
+
+When `setCount(1)` is called:
+
+- React clones Fiber B → creates Work-in-Progress Fiber B'
+- WIP B' holds `memoizedState: 1`
+- WIP B' points back to current B as `.alternate`
+- Eventually, WIP B' becomes the new current
+
+```
+                 Current Tree                Work-In-Progress
+                --------------             -------------------
+<App>   [Fiber A]                  [Fiber A'] (copy)
+ └──    [Fiber B] ←─────────────→ [Fiber B'] ← update here
+                memoizedState: 0           memoizedState: 1
+```
+
+After the commit phase, this flips:
+
+- **Fiber B' becomes current**
+- **Fiber B becomes alternate**
+
+---
+
+## 🧠 Why This Is Powerful
+
+- React can **discard the WIP tree mid-way** if needed (e.g., error, interruption)
+- Enables **Concurrent Mode**, **Suspense**, **Time-Slicing**
+- Helps React keep UI **responsive under heavy load**
+
+---
+
+## ✅ Summary
+
+| Term                     | Meaning                                                      |
+|--------------------------|--------------------------------------------------------------|
+| **Current Fiber**        | The live, committed tree visible to the user                 |
+| **Work-In-Progress Fiber** | A clone of the current used to apply changes                |
+| **Alternate**            | Link between current and WIP Fibers                          |
+| **Why**                  | Enables safe async updates, rollback, non-blocking UI        |
