@@ -650,3 +650,217 @@ curl -X POST http://localhost:3000/shorten \
 - Bulk URL shortening
 - User authentication and management
 - URL validation and security checks
+
+
+
+
+# CDN (Content Delivery Network) Guide
+
+## ✅ What is a CDN (Content Delivery Network)?
+
+A **CDN** is a **network of geographically distributed servers** that **cache and deliver content (like images, JS, CSS, videos, etc.)** from the closest edge server to the user, to **improve performance, reduce latency**, and offload traffic from your origin server.
+
+## 🔥 Why Use a CDN?
+
+* **Faster load times** for users around the globe
+* **Reduced bandwidth usage** on your origin servers
+* **High availability and redundancy**
+* **Protection from DDoS attacks**
+* **Scalable delivery** during traffic spikes (e.g., big sale on e-commerce)
+
+## 📦 What Does a CDN Cache?
+
+* Static assets: images, JS, CSS, fonts, videos
+* Sometimes API responses (if safe and cacheable)
+* Rendered HTML (in SSR/SSG setups like Next.js, Nuxt)
+
+## 🛍️ E-Commerce Use Case with Global CDN
+
+Imagine you're building **a global e-commerce platform** and using a CDN (e.g., Cloudflare, Akamai, AWS CloudFront) to serve:
+* Product images
+* Static JS/CSS/HTML
+* Product pages (SSG or SSR rendered)
+* APIs (optional)
+
+### 🔁 The Problem:
+*"If a seller adds a new product, how does the CDN get the updated data?"*
+
+Here's the detailed flow and solution:
+
+## 🧠 What Actually Happens
+
+1. A **seller adds a product** via a dashboard (admin or seller portal).
+2. This data gets stored in your **database**.
+3. Your backend may also:
+   * Generate **dynamic product page**
+   * Save product image to cloud storage (e.g., S3)
+   * Update internal cache
+4. **BUT**:
+   * The **CDN has already cached** older product list/page.
+   * CDN **won't automatically know** the content has changed.
+
+## 🧯 So how do we handle this?
+
+✅ You need to **invalidate or purge** the cache.
+
+### 💡 Option 1: Manual or Automated Cache Invalidation
+
+When product is added:
+
+```typescript
+await CDN.purgeCache('/products');
+await CDN.purgeCache(`/products/${newProductId}`);
+```
+
+* **Invalidate specific paths** in the CDN cache (e.g., `/products`, `/products/123`)
+* Most CDN providers offer APIs for purging/invalidation (Cloudflare, Fastly, AWS CloudFront)
+
+### 💡 Option 2: Use Short TTL (Time-to-Live)
+
+Set `Cache-Control` headers with short expiry:
+
+```http
+Cache-Control: public, max-age=60
+```
+
+This means CDN will **revalidate the content every 60s**.
+
+✅ Good for frequent updates  
+❌ Still introduces up to 60s delay
+
+### 💡 Option 3: Use Stale-While-Revalidate
+
+Modern CDNs support **stale-while-revalidate**:
+
+```http
+Cache-Control: public, max-age=60, stale-while-revalidate=300
+```
+
+* Users get fast response (even stale)
+* In background, CDN fetches updated data and refreshes cache
+
+### 💡 Option 4: Don't cache dynamic data
+
+* If product pages are fully dynamic (`/product/:id`), you can skip CDN caching
+* Use server-rendering with CDN passthrough or API-level caching
+
+## ✅ Recommended Architecture for Global E-commerce
+
+| Component | Strategy |
+|-----------|----------|
+| Product images | Stored in S3 / cloud + CDN cached |
+| Product page | SSR or SSG + CDN cached |
+| Product API | Cached per tenant/category (TTL + purge) |
+| Admin/product edit | No caching (direct to backend/db) |
+| Invalidation | Trigger via CDN API on product change |
+
+## 🔁 Flow Summary
+
+1. Seller adds product → backend saves to DB/storage
+2. Backend triggers:
+   * **Purge CDN** for affected pages
+   * Or waits for TTL expiry
+3. Users then hit the CDN:
+   * If cache updated → fast new data
+   * If not → backend fetched & cached
+
+## 📌 Final Notes
+
+* CDNs **never know data has changed** until:
+   * You **tell** them (purge/invalidate)
+   * TTL expires
+* Invalidation can be **path-based**, **tag-based**, or **wildcard-based**
+* Many frameworks (e.g., Next.js, Nuxt) have built-in hooks for CDN revalidation
+
+
+# Two-Phase Commit (2PC) Complete Guide
+
+## 🧠 What is Two-Phase Commit (2PC)?
+
+**Two-Phase Commit (2PC)** is a protocol used in **distributed systems** to ensure that a **transaction across multiple services or databases** either **commits completely** or **rolls back entirely**—to maintain consistency.
+
+In simple words: All participants must agree to commit, or **no one commits**.
+
+## 🔄 Real-World Analogy
+
+Imagine you're organizing a group trip and you say:
+"We'll only book tickets if **everyone agrees** to go."
+
+1. **Ask Phase**: You ask everyone: *"Can you go on the trip?"*
+2. **Confirm Phase**:
+   * If **everyone says YES**, you book the tickets.
+   * If **anyone says NO**, the whole trip is canceled.
+
+That's 2PC.
+
+## 🏗️ Real Example in Distributed Systems
+
+### Scenario: E-commerce Order System
+
+You have a system with **3 services**:
+1. **Order Service** – saves the order
+2. **Payment Service** – processes the payment
+3. **Inventory Service** – reserves items
+
+You want all 3 to **succeed or fail together** in a single transaction.
+
+## ✍️ Step-by-Step: Two-Phase Commit Protocol
+
+### ✅ **Phase 1: Prepare (Voting)**
+
+* A **coordinator** (e.g. Order Service) sends a `PREPARE` request to all participants (Payment, Inventory).
+* Each participant:
+   * Executes the operation (e.g. reserve funds, reserve stock).
+   * **But does not commit yet.**
+   * Replies with `YES` (ready to commit) or `NO` (cannot commit).
+
+### ✅ **Phase 2: Commit/Rollback**
+
+* If **all** participants reply `YES`:
+   * Coordinator sends `COMMIT` to all.
+   * All participants commit their operations.
+* If **any** reply `NO`:
+   * Coordinator sends `ROLLBACK` to all.
+   * All participants undo any temporary changes.
+
+## 🔁 Sequence Diagram
+
+```
+Coordinator    Inventory    Payment
+    |              |            |
+    |----PREPARE--->|            |
+    |               |            |
+    |--PREPARE------|----------->|
+    |               |            |
+    |<---YES--------|            |
+    |<----YES-------|------------|
+    |               |            |
+    |----COMMIT---->|            |
+    |               |            |
+    |----COMMIT-----|----------->|
+```
+
+## 💥 What Happens on Failure?
+
+* If a participant crashes after voting YES but before committing?
+   * The coordinator **remembers** decisions via logs (called a **transaction log**).
+   * When the node comes back, it **replays** the log to ensure consistency.
+
+## ❌ Drawbacks of 2PC
+
+1. **Blocking**: If the coordinator crashes during commit, all participants **wait indefinitely**.
+2. **No Auto Recovery**: Participants need human or custom logic to fix stuck transactions.
+3. **Slow**: More network hops + logs make it slower than local transactions.
+
+## ✅ When is 2PC Used?
+
+* **Banking systems** where consistency is critical.
+* **Distributed databases** like PostgreSQL with foreign data wrappers.
+* **Microservices** when each service uses its own database.
+
+## 🚫 Alternatives in Modern Systems
+
+Due to its **blocking nature**, modern distributed systems often use:
+
+* **Sagas** (choreography/orchestration-based long-running transactions)
+* **Eventual consistency** via event sourcing or message queues

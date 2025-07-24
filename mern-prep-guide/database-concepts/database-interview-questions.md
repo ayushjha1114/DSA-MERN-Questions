@@ -823,3 +823,7 @@ TRUNCATE TABLE users;
 ```
 
 🔹 Entire users table is now empty, but structure remains.
+
+
+
+

@@ -1243,6 +1243,103 @@ console.log({}.isAdmin); // true — polluted all objects
 
 This can happen in apps that merge deeply nested objects (like `lodash.merge`) without proper validation.
 
+# Prototype Pollution Vulnerability Guide
+
+## 🧨 Example: Prototype Pollution Vulnerability
+
+```javascript
+const obj = {};
+
+function merge(target, source) {
+  for (let key in source) {
+    target[key] = source[key];
+  }
+}
+
+// Attacker input
+const maliciousPayload = JSON.parse('{"__proto__":{"isAdmin":true}}');
+
+// Merging attacker-controlled object into a target object
+merge({}, maliciousPayload);
+
+// Now every new object has `isAdmin: true`
+const user = {};
+console.log(user.isAdmin);  // 👉 true (unexpected!)
+```
+
+## 🧠 Why is this dangerous?
+
+Because by modifying `Object.prototype`, it:
+
+- Affects all objects created afterward
+- Can bypass security checks (`if (user.isAdmin)`, etc.)
+
+## ✅ How to Prevent It
+
+### 1. Block `__proto__`, `constructor`, and `prototype` keys:
+
+```javascript
+function safeMerge(target, source) {
+  for (let key in source) {
+    if (['__proto__', 'constructor', 'prototype'].includes(key)) continue;
+    target[key] = source[key];
+  }
+}
+```
+
+## Additional Prevention Techniques
+
+### 2. Use Object.create(null) for Safe Objects
+
+```javascript
+const safeObj = Object.create(null);
+// This object has no prototype, preventing pollution
+```
+
+### 3. Use Map Instead of Objects
+
+```javascript
+const safeMap = new Map();
+safeMap.set('key', 'value');
+// Maps are not affected by prototype pollution
+```
+
+### 4. Validate Input with Allow Lists
+
+```javascript
+function safeMerge(target, source, allowedKeys) {
+  for (let key in source) {
+    if (allowedKeys.includes(key)) {
+      target[key] = source[key];
+    }
+  }
+}
+```
+
+### 5. Use Libraries with Built-in Protection
+
+Consider using libraries like:
+- `lodash.merge` (with proper configuration)
+- `deepmerge` with safe options
+- Custom validation libraries
+
+## ⚠️ Real-World Impact
+
+Prototype pollution can lead to:
+- **Authentication bypass**
+- **Privilege escalation**
+- **Remote code execution** (in Node.js environments)
+- **Data corruption**
+- **Application crashes**
+
+## 🔍 Detection Tips
+
+Look out for:
+- User-controlled input being merged into objects
+- JSON parsing without validation
+- Dynamic property assignment
+- Libraries that don't sanitize object keys
+
 **🧨 Result:** unexpected behavior, security issues (bypass auth checks, SSRF, etc.)
 
 ## ✅ 5. Is It Really Important to Know This?
