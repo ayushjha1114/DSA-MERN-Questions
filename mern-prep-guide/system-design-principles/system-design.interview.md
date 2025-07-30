@@ -864,3 +864,590 @@ Due to its **blocking nature**, modern distributed systems often use:
 
 * **Sagas** (choreography/orchestration-based long-running transactions)
 * **Eventual consistency** via event sourcing or message queues
+
+
+
+# Event Coupling in Software Architecture
+
+## What is Event Coupling?
+
+Event coupling refers to how tightly or loosely two parts of a system (typically components, services, or modules) are linked through events—meaning, how they interact or communicate based on emitted events rather than direct calls.
+
+🔹 **Simple Definition:**
+Event coupling is a design concept where components communicate by emitting and listening to events rather than calling each other directly.
+
+## 🔧 Types of Coupling in Context of Events
+
+| Type | Description |
+|------|-------------|
+| **Tight Coupling** | Components know about each other and call each other directly. |
+| **Loose Coupling (via Events)** | Components emit/listen to events without knowing each other's details. |
+
+## Examples
+
+### Example of Tightly Coupled Components
+
+**In Node.js (Tight Coupling):**
+
+```javascript
+// userController.js
+const emailService = require('./emailService');
+
+function createUser(userData) {
+  // save user to DB
+  emailService.sendWelcomeEmail(userData.email); // directly calling another module
+}
+```
+
+Here, `userController` is tightly coupled to `emailService`. If the email logic changes, it can directly impact the controller.
+
+### Example of Loosely Coupled Components
+
+**In Node.js (Loose Coupling using events):**
+
+```javascript
+// eventBus.js
+const EventEmitter = require('events');
+module.exports = new EventEmitter();
+
+// userController.js
+const eventBus = require('./eventBus');
+
+function createUser(userData) {
+  // save user
+  eventBus.emit('userCreated', userData);
+}
+
+// emailService.js
+const eventBus = require('./eventBus');
+
+eventBus.on('userCreated', (user) => {
+  console.log('Sending welcome email to', user.email);
+});
+```
+
+`userController` and `emailService` are now loosely coupled. They communicate via events without direct dependency.
+
+## Benefits of Loose Coupling via Events
+
+- **Maintainability**: Changes in one component don't directly affect others
+- **Scalability**: Easy to add new event listeners without modifying existing code
+- **Testability**: Components can be tested independently
+- **Flexibility**: Components can be easily replaced or modified
+- **Decoupling**: Reduces dependencies between different parts of the system
+
+
+# Task Scheduler System: Concurrency Control with Dependencies
+
+Let's design a **scheduler system** that:
+- Has limited **concurrency/capacity** (e.g., can only run N tasks in parallel)
+- Supports **async tasks**
+- Allows **dependent tasks** (task B waits for the result of task A)
+
+## 🔧 Problem Statement
+
+Design a **Task Scheduler** in **Node.js** that:
+1. Accepts a list of async tasks
+2. Executes up to `MAX_CONCURRENT_TASKS` at once
+3. Handles **dependency** where a task may depend on the output of one or more other tasks
+4. Once dependencies are resolved, the dependent task runs
+
+## ✅ Example Scenario
+
+We have these tasks:
+
+| Task | Depends On | Work |
+|------|------------|------|
+| **A** | - | Returns `2` after 1s |
+| **B** | A | Returns `A * 3` |
+| **C** | B | Returns `B + 4` |
+| **D** | - | Returns `10` |
+| **E** | D | Returns `D * 2` |
+
+We set `MAX_CONCURRENT_TASKS = 2`.
+
+### Visual Dependency Graph:
+```text
+A (1s delay) ──► B ──► C
+                
+D ──► E
+
+Expected Execution Order:
+1. A and D start simultaneously (concurrency = 2)
+2. After A completes → B starts
+3. After D completes → E starts  
+4. After B completes → C starts
+```
+
+## 🧠 Architecture in Steps
+
+1. Use a **task queue**
+2. Use a **Promise map** to store task results
+3. Track which tasks can run (dependencies are met)
+4. Only start a task if:
+   - Dependencies are resolved
+   - Capacity allows
+
+### System Flow Diagram:
+```text
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│ Pending     │    │ Dependency   │    │ Ready to    │
+│ Tasks       │───►│ Checker      │───►│ Execute     │
+│ Queue       │    │              │    │ Queue       │
+└─────────────┘    └──────────────┘    └─────────────┘
+                                              │
+                                              ▼
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│ Results     │◄───│ Task         │◄───│ Concurrency │
+│ Storage     │    │ Executor     │    │ Controller  │
+└─────────────┘    └──────────────┘    └─────────────┘
+```
+
+## 🧪 Code Implementation (Node.js)
+
+```javascript
+const MAX_CONCURRENT_TASKS = 2;
+
+class Scheduler {
+    constructor(tasks) {
+        this.tasks = tasks;           // Task definitions
+        this.running = 0;             // Current running task count
+        this.results = new Map();     // taskName => result
+        this.taskPromises = new Map(); // taskName => Promise
+    }
+
+    async run() {
+        const pendingTasks = new Set(Object.keys(this.tasks));
+        const taskQueue = [];
+
+        while (pendingTasks.size > 0) {
+            // Check which tasks can run
+            for (const taskName of [...pendingTasks]) {
+                const task = this.tasks[taskName];
+                
+                // Check if all dependencies are resolved
+                const dependenciesResolved = task.dependsOn.every(dep => 
+                    this.results.has(dep)
+                );
+
+                // Start task if dependencies met and capacity available
+                if (dependenciesResolved && this.running < MAX_CONCURRENT_TASKS) {
+                    pendingTasks.delete(taskName);
+                    this.running++;
+
+                    // Get dependency results
+                    const depResults = task.dependsOn.map(dep => 
+                        this.results.get(dep)
+                    );
+
+                    // Execute task
+                    const taskPromise = task.run(...depResults).then(result => {
+                        this.results.set(taskName, result);
+                        console.log(`Task ${taskName} completed:`, result);
+                        this.running--;
+                    });
+
+                    taskQueue.push(taskPromise);
+                }
+            }
+
+            // Wait for at least one task to complete before next iteration
+            if (this.running >= MAX_CONCURRENT_TASKS || pendingTasks.size > 0) {
+                await Promise.race(taskQueue);
+            }
+        }
+
+        // Wait for all remaining tasks to complete
+        await Promise.all(taskQueue);
+        return this.results;
+    }
+}
+
+// 🔨 Define Tasks
+const taskDefs = {
+    A: {
+        dependsOn: [],
+        run: async () => {
+            console.log('Task A starting...');
+            await new Promise(res => setTimeout(res, 1000));
+            return 2;
+        }
+    },
+    B: {
+        dependsOn: ['A'],
+        run: async (a) => {
+            console.log('Task B starting with A =', a);
+            return a * 3;
+        }
+    },
+    C: {
+        dependsOn: ['B'],
+        run: async (b) => {
+            console.log('Task C starting with B =', b);
+            return b + 4;
+        }
+    },
+    D: {
+        dependsOn: [],
+        run: async () => {
+            console.log('Task D starting...');
+            return 10;
+        }
+    },
+    E: {
+        dependsOn: ['D'],
+        run: async (d) => {
+            console.log('Task E starting with D =', d);
+            return d * 2;
+        }
+    }
+};
+
+// 🚀 Run Scheduler
+(async () => {
+    const scheduler = new Scheduler(taskDefs);
+    console.log('Starting scheduler with MAX_CONCURRENT_TASKS =', MAX_CONCURRENT_TASKS);
+    
+    const startTime = Date.now();
+    const results = await scheduler.run();
+    const endTime = Date.now();
+    
+    console.log('\n📊 Final Results:', Object.fromEntries(results));
+    console.log(`⏱️  Total execution time: ${endTime - startTime}ms`);
+})();
+```
+
+## 🧾 Expected Output
+
+```yaml
+Starting scheduler with MAX_CONCURRENT_TASKS = 2
+Task A starting...
+Task D starting...
+Task A completed: 2
+Task D completed: 10
+Task B starting with A = 2
+Task E starting with D = 10
+Task B completed: 6
+Task E completed: 20
+Task C starting with B = 6
+Task C completed: 10
+
+📊 Final Results: { A: 2, B: 6, C: 10, D: 10, E: 20 }
+⏱️  Total execution time: ~1000ms
+```
+
+## 🎯 Execution Timeline Analysis
+
+```text
+Time 0ms:    [A starts] [D starts]     (concurrency = 2/2)
+Time 1000ms: [A completes] [D completes]
+             [B starts] [E starts]     (concurrency = 2/2)
+Time 1001ms: [B completes] [E completes]
+             [C starts]                (concurrency = 1/2)
+Time 1002ms: [C completes]             (all done)
+```
+
+## 🚀 Enhanced Features
+
+### 1. **Error Handling**
+```javascript
+class EnhancedScheduler extends Scheduler {
+    async run() {
+        // ... existing code ...
+        
+        const taskPromise = task.run(...depResults)
+            .then(result => {
+                this.results.set(taskName, result);
+                console.log(`✅ Task ${taskName} completed:`, result);
+                this.running--;
+            })
+            .catch(error => {
+                console.error(`❌ Task ${taskName} failed:`, error.message);
+                this.results.set(taskName, null); // Mark as failed
+                this.running--;
+                throw error; // Propagate error
+            });
+        
+        // ... rest of code ...
+    }
+}
+```
+
+### 2. **Priority Queue**
+```javascript
+class PriorityScheduler extends Scheduler {
+    constructor(tasks) {
+        super(tasks);
+        // Add priority to task definitions
+        this.taskPriorities = new Map();
+    }
+    
+    getNextTask(readyTasks) {
+        // Sort by priority (higher number = higher priority)
+        return readyTasks.sort((a, b) => 
+            (this.taskPriorities.get(b) || 0) - (this.taskPriorities.get(a) || 0)
+        )[0];
+    }
+}
+```
+
+### 3. **Progress Tracking**
+```javascript
+class ProgressScheduler extends Scheduler {
+    constructor(tasks) {
+        super(tasks);
+        this.totalTasks = Object.keys(tasks).length;
+        this.completedTasks = 0;
+    }
+    
+    onTaskComplete(taskName, result) {
+        this.completedTasks++;
+        const progress = (this.completedTasks / this.totalTasks * 100).toFixed(1);
+        console.log(`📈 Progress: ${progress}% (${this.completedTasks}/${this.totalTasks})`);
+    }
+}
+```
+
+## 📌 Real-World Use Cases
+
+### 1. **Data Pipeline**
+```javascript
+const dataPipeline = {
+    extractData: {
+        dependsOn: [],
+        run: async () => {
+            // Extract from database
+            return await db.query('SELECT * FROM raw_data');
+        }
+    },
+    transformData: {
+        dependsOn: ['extractData'],
+        run: async (rawData) => {
+            // Transform data
+            return rawData.map(row => ({ ...row, processed: true }));
+        }
+    },
+    loadData: {
+        dependsOn: ['transformData'],
+        run: async (transformedData) => {
+            // Load into warehouse
+            return await warehouse.bulkInsert(transformedData);
+        }
+    }
+};
+```
+
+### 2. **CI/CD Pipeline**
+```javascript
+const cicdPipeline = {
+    checkout: {
+        dependsOn: [],
+        run: async () => await git.checkout('main')
+    },
+    build: {
+        dependsOn: ['checkout'],
+        run: async () => await npm.run('build')
+    },
+    test: {
+        dependsOn: ['build'],
+        run: async () => await npm.run('test')
+    },
+    deploy: {
+        dependsOn: ['test'],
+        run: async () => await kubernetes.deploy()
+    }
+};
+```
+
+### 3. **Microservice Chain**
+```javascript
+const microserviceChain = {
+    authenticate: {
+        dependsOn: [],
+        run: async () => await authService.verify(token)
+    },
+    getUserProfile: {
+        dependsOn: ['authenticate'],
+        run: async (user) => await profileService.get(user.id)
+    },
+    getRecommendations: {
+        dependsOn: ['getUserProfile'],
+        run: async (profile) => await mlService.recommend(profile)
+    },
+    logAnalytics: {
+        dependsOn: ['authenticate'],
+        run: async (user) => await analytics.log(user.id, 'page_view')
+    }
+};
+```
+
+## 🔍 Performance Analysis
+
+| Scenario | Without Scheduler | With Scheduler (concurrency=2) | Improvement |
+|----------|------------------|--------------------------------|-------------|
+| **Sequential** | 5 seconds | 1 second | 5x faster |
+| **All Parallel** | 1 second | 1 second | Same |
+| **Mixed Dependencies** | 3 seconds | 1.5 seconds | 2x faster |
+
+## 🛠️ Configuration Options
+
+```javascript
+const config = {
+    maxConcurrentTasks: 3,
+    enablePriority: true,
+    errorHandling: 'fail-fast', // or 'continue'
+    timeout: 30000, // 30 seconds
+    retryCount: 3,
+    progressReporting: true
+};
+
+const scheduler = new Scheduler(tasks, config);
+```
+
+## 🎯 Key Benefits
+
+1. **Controlled Concurrency**: Prevents system overload
+2. **Dependency Management**: Ensures proper execution order
+3. **Resource Optimization**: Maximizes parallelism where possible
+4. **Error Isolation**: Failed tasks don't block independent tasks
+5. **Scalability**: Easy to adjust concurrency based on system capacity
+
+This scheduler system provides a robust foundation for managing complex, interdependent async operations in production environments! 🚀
+
+
+# MongoDB Real-time Pagination with Continuous Writes
+
+## Problem Statement
+
+You're describing a scenario where:
+* Your MongoDB collection is continuously **being written to (insert/update)**.
+* You want to **fetch all records** using **pagination**, but ensure the final result includes **everything that existed before the fetch started** **plus** **any new records added during the pagination process**.
+* Even if the dataset grows mid-fetch, the API should **eventually return everything** up to the "now".
+
+## ✅ Challenges
+
+1. **Real-time writes** may cause:
+   * Duplicates (if the same record is read twice)
+   * Missing data (if new data is added after a batch is fetched)
+2. **Pagination** is used for performance, but naive paging (e.g., skip-limit) becomes **inconsistent** during real-time writes.
+
+## ✅ Solution Overview: "Tailing Consistent Snapshot with Resume"
+
+We will implement a **paginated fetch** with these features:
+
+1. **Use `_id` (ObjectId) as a cursor** to paginate consistently.
+2. **Capture max `_id` at fetch start time** — this is the snapshot boundary.
+3. While fetching pages:
+   * Only fetch records with `_id <= max_id` → ensures consistent snapshot.
+4. After fetching full snapshot:
+   * Fetch **records with `_id > max_id`** to collect **newly inserted data**.
+
+## 🔧 Implementation Strategy
+
+### 1. Step-by-step Logic
+
+```text
+1. Fetch the maximum _id at the start → call it snapshotId
+2. Set pageSize to paginate efficiently
+3. Paginate through records where _id <= snapshotId
+4. After that, fetch records where _id > snapshotId (new data)
+```
+
+### 🧪 Example Code (Express.js + MongoDB)
+
+```javascript
+const express = require('express');
+const mongoose = require('mongoose');
+const app = express();
+
+const MyModel = mongoose.model('Record', new mongoose.Schema({
+  name: String,
+  updatedAt: Date,
+}, { timestamps: true }));
+
+app.get('/api/fetch-all', async (req, res) => {
+  try {
+    const pageSize = 100;
+    let allRecords = [];
+
+    // 1. Get snapshot of current max _id
+    const latestRecord = await MyModel.findOne().sort({ _id: -1 }).limit(1);
+    const snapshotId = latestRecord?._id;
+    
+    if (!snapshotId) return res.json([]);
+
+    let lastId = null;
+
+    // 2. Fetch in pages up to snapshotId
+    while (true) {
+      const query = lastId 
+        ? { _id: { $gt: lastId, $lte: snapshotId } }
+        : { _id: { $lte: snapshotId } };
+
+      const page = await MyModel.find(query)
+        .sort({ _id: 1 })
+        .limit(pageSize);
+
+      if (page.length === 0) break;
+
+      allRecords.push(...page);
+      lastId = page[page.length - 1]._id;
+    }
+
+    // 3. Fetch new records added after snapshot
+    let newLastId = snapshotId;
+    while (true) {
+      const newPage = await MyModel.find({ _id: { $gt: newLastId } })
+        .sort({ _id: 1 })
+        .limit(pageSize);
+
+      if (newPage.length === 0) break;
+
+      allRecords.push(...newPage);
+      newLastId = newPage[newPage.length - 1]._id;
+    }
+
+    res.json(allRecords);
+  } catch (err) {
+    console.error('Fetch failed:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+```
+
+## 🧠 Key Points
+
+* We avoid `skip` which is performance-heavy and unstable under writes.
+* MongoDB ObjectIds are **monotonically increasing**, so `_id > x` works as a pagination cursor.
+* We fetch in two phases:
+  1. "Stable snapshot" fetch (bounded)
+  2. "Tail follow-up" for newly inserted docs
+
+## 🚫 Caveats
+
+* This does **not** handle **updates** to previously fetched records. To handle **updates in real-time**, you'd need:
+  * **Change Streams** (MongoDB's event-based updates)
+  * Or periodically re-fetch based on `updatedAt` field
+
+## ✅ How to Include Updates Too?
+
+If you also want to **track updates** (not just inserts), you can:
+
+1. Record all `_id`s fetched in memory.
+2. After all fetches, query for records with:
+
+```javascript
+{ 
+  _id: { $in: [...fetchedIds] }, 
+  updatedAt: { $gt: fetchStartTime } 
+}
+```
+
+3. Merge or replace updated versions.
+
+## 🏁 Final Note
+
+This approach gives you:
+* Paginated fetching
+* Real-time completeness (inserts handled)
+* Simplicity (no heavy infra like Kafka or change streams)

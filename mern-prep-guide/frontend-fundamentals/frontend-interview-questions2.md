@@ -1,5 +1,7 @@
 # Debouncing in React - Complete Guide
 
+***SANDBOX LINK***- https://codesandbox.io/p/sandbox/wonderful-moon-mz8zrc
+
 ## ✅ What is **Debouncing**?
 
 **Debouncing** is a programming technique used to **limit the rate** at which a function is executed. It's commonly used in scenarios where a function is **triggered frequently** — such as on `input`, `scroll`, or `resize` events — to improve performance and reduce unnecessary operations (like API calls or heavy DOM updates).
@@ -73,7 +75,29 @@ function useDebounce(value, delay = 500) {
 ### Usage in component:
 
 ```jsx
-const query = useDebounce(inputValue, 300);
+import "./styles.css";
+import { useState, useEffect } from "react";
+import useDebounce from "./useDebounce";
+
+export default function App() {
+  const [input, setInput] = useState("");
+
+  const res = useDebounce(input, 500);
+  return (
+    <>
+      <div className="App">
+        <h2>Debounce demo</h2>
+        <h3>After debounced value is - {res}</h3>
+        <input
+          type="text"
+          value={input}
+          placeholder="type your name"
+          onChange={(e) => setInput(e.target.value)}
+        />
+      </div>
+    </>
+  );
+}
 ```
 
 ## Key Benefits:
@@ -84,71 +108,133 @@ const query = useDebounce(inputValue, 300);
 - **Responsive UI**: Keeps the interface smooth during frequent events
 
 
-# Event Coupling in Software Architecture
+# Throttling Complete Guide with React Implementation
 
-## What is Event Coupling?
+## 🧠 What is Throttling?
 
-Event coupling refers to how tightly or loosely two parts of a system (typically components, services, or modules) are linked through events—meaning, how they interact or communicate based on emitted events rather than direct calls.
+**Throttling** ensures that a **function is called at most once every X milliseconds**, no matter how many times the event is triggered.
 
-🔹 **Simple Definition:**
-Event coupling is a design concept where components communicate by emitting and listening to events rather than calling each other directly.
+## 🔁 How it Works
 
-## 🔧 Types of Coupling in Context of Events
+Imagine a user is scrolling or resizing the window, and you want to run a function at most **once every 1000ms**, even if the event fires 100 times.
 
-| Type | Description |
-|------|-------------|
-| **Tight Coupling** | Components know about each other and call each other directly. |
-| **Loose Coupling (via Events)** | Components emit/listen to events without knowing each other's details. |
+Internally, throttling:
+* Uses a **timestamp or a timeout**
+* Waits for the next "allowed" time slot before executing the function again
 
-## Examples
+## 🧰 Use Cases of Throttling
 
-### Example of Tightly Coupled Components
+| Use Case | Why Use Throttling? |
+|----------|---------------------|
+| Scroll event | Avoid running logic on every pixel scroll |
+| Resize event | Optimize reflows on window resize |
+| Button clicks (e.g. API calls) | Prevent accidental double submissions |
+| Mouse move tracking | Reduce processing on high-frequency events |
 
-**In Node.js (Tight Coupling):**
+## 🔧 React Implementation
+
+### Custom Throttle Hook
 
 ```javascript
-// userController.js
-const emailService = require('./emailService');
+import { useState, useEffect, useRef } from "react";
 
-function createUser(userData) {
-  // save user to DB
-  emailService.sendWelcomeEmail(userData.email); // directly calling another module
+const useThrottle = (value, delay = 1000) => {
+  const [throttleVal, setThrottleVal] = useState(value);
+  const timerRef = useRef(null);
+  const lastValueRef = useRef(value);
+
+  useEffect(() => {
+    lastValueRef.current = value;
+
+    if (!timerRef.current) {
+      setThrottleVal(value);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+
+        if (lastValueRef.current !== throttleVal) {
+          setThrottleVal(lastValueRef.current);
+        }
+      }, delay);
+    }
+  }, [value, delay, throttleVal]);
+
+  return throttleVal;
+};
+
+export default useThrottle;
+```
+
+### Demo Application
+
+```javascript
+import "./styles.css";
+import { useState, useEffect } from "react";
+import useDebounce from "./useDebounce";
+import useThrottle from "./useThrottle";
+
+export default function App() {
+  const [input, setInput] = useState("");
+  const [isThrottleOpen, setIsThrottleOpen] = useState(false);
+  const [throttleInput, setThrottleInput] = useState("");
+
+  const res = useDebounce(input, 500);
+  let throttleRes = useThrottle(throttleInput, 1000);
+
+  return (
+    <>
+      <button onClick={() => setIsThrottleOpen(!isThrottleOpen)}>
+        For Throttle
+      </button>
+      
+      <div className="App">
+        <h2>Debounce demo</h2>
+        <h3>After debounced value is - {res}</h3>
+        <input
+          type="text"
+          value={input}
+          placeholder="type your name"
+          onChange={(e) => setInput(e.target.value)}
+        />
+      </div>
+      
+      {isThrottleOpen && (
+        <div className="App">
+          <h2>Throttling demo</h2>
+          <h3>After throttling value is - {throttleRes}</h3>
+          <input
+            type="text"
+            value={throttleInput}
+            placeholder="type something...."
+            onChange={(e) => setThrottleInput(e.target.value)}
+          />
+        </div>
+      )}
+    </>
+  );
 }
 ```
 
-Here, `userController` is tightly coupled to `emailService`. If the email logic changes, it can directly impact the controller.
+## 🔍 How the Hook Works
 
-### Example of Loosely Coupled Components
+1. **Initial State**: Sets the throttled value to the initial input value
+2. **Timer Check**: If no timer is running, immediately update the throttled value
+3. **Timer Setup**: Creates a timeout for the specified delay
+4. **Last Value Tracking**: Keeps track of the most recent input value
+5. **Timer Completion**: When timer expires, checks if there's a newer value to update
 
-**In Node.js (Loose Coupling using events):**
+## 🎯 Key Benefits
 
-```javascript
-// eventBus.js
-const EventEmitter = require('events');
-module.exports = new EventEmitter();
+- **Performance Optimization**: Reduces function calls significantly
+- **User Experience**: Prevents laggy interfaces during high-frequency events
+- **Resource Management**: Saves CPU and memory by limiting execution frequency
+- **Predictable Behavior**: Ensures consistent timing intervals
 
-// userController.js
-const eventBus = require('./eventBus');
+## 🆚 Throttling vs Debouncing
 
-function createUser(userData) {
-  // save user
-  eventBus.emit('userCreated', userData);
-}
+| Aspect | Throttling | Debouncing |
+|--------|------------|------------|
+| **Execution** | At regular intervals | Only after delay with no new events |
+| **Use Case** | Scroll, resize, mouse move | Search input, form validation |
+| **Behavior** | Executes periodically | Waits for pause in events |
 
-// emailService.js
-const eventBus = require('./eventBus');
-
-eventBus.on('userCreated', (user) => {
-  console.log('Sending welcome email to', user.email);
-});
-```
-
-`userController` and `emailService` are now loosely coupled. They communicate via events without direct dependency.
-
-## Benefits of Loose Coupling via Events
-
-- **Maintainability**: Changes in one component don't directly affect others
-- **Scalability**: Easy to add new event listeners without modifying existing code
-- **Testability**: Components can be tested independently
-- **Flexibility**: Components can be easily replaced or modified
-- **Decoupling**: Reduces dependencies between different parts of the system
+This implementation provides a robust throttling mechanism that can be easily integrated into any React application for performance optimization.

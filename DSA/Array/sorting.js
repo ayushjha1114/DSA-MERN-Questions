@@ -36,37 +36,38 @@
 // Merge Sort
 
 function merge(arr, left, mid, right) {
-    let i  = left;
-    let j = mid + 1;
-    let k = left;
-    let b = [];
-    while(i <= mid && j <= right) {
-        if (arr[i] <= arr[j]) {
-            b[k] =arr[i];
-            i++;
-        } else {
-            b[k] = arr[j];
-            j++;
-        }
-        k++;
-    }
-    if ( i > mid) {
-        while ( j <= right) {
-            b[k++] = arr[j++];
-        }
-    } else {
-        while ( i <= mid) {
-            b[k++] = arr[i++];
-        }
-    }
-    
-    for ( let i = left; i <= right; i++) {
-        arr[i] = b[i];
-    }
-    // console.log(arr, b);
+    let leftIndex = left;
+    let rightIndex = mid + 1;
+    let sortedIndex = left;
+    let temp = [];
 
-    
+    while (leftIndex <= mid && rightIndex <= right) {
+        if (arr[leftIndex] <= arr[rightIndex]) {
+            temp[sortedIndex] = arr[leftIndex];
+            leftIndex++;
+        } else {
+            temp[sortedIndex] = arr[rightIndex];
+            rightIndex++;
+        }
+        sortedIndex++;
+    }
+
+    // Copy remaining elements from left side, if any
+    while (leftIndex <= mid) {
+        temp[sortedIndex++] = arr[leftIndex++];
+    }
+
+    // Copy remaining elements from right side, if any
+    while (rightIndex <= right) {
+        temp[sortedIndex++] = arr[rightIndex++];
+    }
+
+    // Copy sorted elements back to the original array
+    for (let i = left; i <= right; i++) {
+        arr[i] = temp[i];
+    }
 }
+
 
 function mergeSort(arr, left, right) {
     if (left < right) {
