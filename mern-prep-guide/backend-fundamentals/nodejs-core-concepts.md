@@ -1,3 +1,178 @@
+# Node.js API Request Flow - Internal Processing Guide
+
+## Question
+Suppose a user hits an API request, but this API is not doing any async task like fetching data from DB. Instead, it just sanitizes the request payload. I want to understand how Node.js handles this API internally - what would be the flow once the API goes to the Node.js environment?
+
+## Context
+- No async I/O like DB or file system operations
+- The API just sanitizes incoming JSON and sends a response
+- Server is built using Node.js + Express.js
+
+## Step-by-Step Execution Flow (Node.js Internals)
+
+### 1. TCP Connection Established (libuv + OS)
+- A client (like Postman or a browser) sends an HTTP request
+- The underlying OS routes the packet to the open TCP port (e.g., 3000)
+- **libuv**, Node.js's underlying event-driven C library, handles the TCP connection on the event loop
+
+### 2. Node.js HTTP Parser (C++ Layer)
+- Node.js has a built-in HTTP parser written in C++ (**llhttp**)
+- It parses the raw bytes of the request into a structured JavaScript object:
+
+```javascript
+{
+  method: 'POST',
+  url: '/sanitize',
+  headers: { ... },
+  body: '{ "name": "<script>..." }'
+}
+```
+
+### 3. Request Routed via Express Middleware
+- Express wraps the Node.js HTTP module
+- The request is passed through Express middleware stack:
+  - `express.json()` parses JSON body (if included)
+  - Custom middleware (e.g., logger, CORS)
+  - Your actual route handler is reached
+
+### 4. Synchronous JavaScript Execution (V8)
+Your route handler is plain synchronous JS:
+
+```javascript
+app.post('/sanitize', (req, res) => {
+  const sanitized = sanitizeInput(req.body); // Pure JS function
+  res.json({ sanitized });
+});
+```
+
+- Since there's no async call, this code runs top to bottom in one go, on the main thread
+- **V8** (Node's JS engine) compiles and executes this JS synchronously
+
+### 5. Response Queued to OS Kernel
+When you call `res.json(...)`, Express:
+- Serializes your response object to a JSON string
+- Sets appropriate HTTP headers
+- Uses `response.write()` → pushes data to a buffer managed by the OS
+
+### 6. Event Loop (libuv) Handles Network Write
+- Although the logic is synchronous, the actual network transmission (writing the response to the socket) is handled by libuv's event loop
+- It queues the write operation and flushes it to the TCP socket
+
+### 7. OS Sends Response Over the Network
+Once the socket is flushed, the OS sends the HTTP response bytes back to the client.
+
+## Key Components Summary
+
+| Step | Component | Role |
+|------|-----------|------|
+| 1 | OS + libuv | Accept incoming TCP connection |
+| 2 | llhttp (C++) | Parse raw HTTP request into JS object |
+| 3 | Express | Route the request through middleware |
+| 4 | V8 | Execute your JS handler synchronously |
+| 5 | Express/Node.js | Build response and queue for write |
+| 6 | libuv | Write response to socket asynchronously |
+| 7 | OS | Send response to client |
+
+## Important Clarifications
+
+### Why TCP Protocol is Involved in HTTP APIs
+
+**Question**: "For simple HTTP API, it doesn't use TCP protocol, so how does TCP protocol come into the picture?"
+
+**Answer**: Even a "simple HTTP API" always uses TCP because:
+- **HTTP is an application-layer protocol, built on top of TCP** (Transport Layer protocol)
+- Every HTTP request (from browser, Postman, etc.) is sent over a TCP connection
+
+#### Protocol Stack:
+```
+Application Layer:        HTTP
+Transport Layer:          TCP
+Network Layer:            IP
+Link Layer:               Ethernet/WiFi
+```
+
+When a client sends an HTTP request to your Node.js server:
+1. The client establishes a TCP connection with the server (ip:port)
+2. Then sends the HTTP request over that connection
+3. The server reads/parses the TCP stream to understand the HTTP request
+
+### Event Loop Role in Synchronous Operations
+
+**Question**: "I'm confused with the event loop role. I know when there is async task then event loop comes into the picture."
+
+**Answer**: The event loop **always runs** in Node.js — even when you're not doing async work.
+
+#### Why?
+Because Node.js is single-threaded and event-driven, the event loop is responsible for:
+
+| Role | Example |
+|------|---------|
+| Accepting new connections | TCP server waiting on port 3000 |
+| Reading requests from sockets | Receive HTTP body |
+| Writing responses to clients | Send back your `res.json(...)` |
+| Handling timers | `setTimeout`, even if unused |
+| Managing callbacks | Both sync and async |
+
+Even if your API route is 100% synchronous, the event loop still:
+1. Waits for a TCP connection
+2. Delegates to the HTTP parser (llhttp) when data is received
+3. Passes the parsed request to your Express handler
+4. Sends the response and schedules the socket to be closed
+5. Returns to waiting for the next request
+
+## Event Loop Flow Diagram
+
+```
+┌────────────────────────────┐
+│   Incoming TCP Connection  │  <-- Browser or Postman
+└────────────────────────────┘
+           │
+           ▼
+┌────────────────────────────┐
+│ libuv Event Loop detects   │
+│ readable socket (TCP)      │
+└────────────────────────────┘
+           │
+           ▼
+┌────────────────────────────┐
+│  Node.js HTTP parser       │
+│  (llhttp parses raw bytes) │
+└────────────────────────────┘
+           │
+           ▼
+┌────────────────────────────┐
+│   Express handler runs JS  │  <-- Your sanitize function
+└────────────────────────────┘
+           │
+           ▼
+┌────────────────────────────┐
+│  Response flushed via OS   │
+│  using libuv TCP write     │
+└────────────────────────────┘
+```
+
+## Key Takeaways
+
+### No Async? Still Uses Event Loop
+Even though your logic is purely synchronous, Node.js still relies on the event loop to:
+- Accept connections
+- Parse requests
+- Flush responses over the socket
+
+You're just not blocking on async operations like file I/O or DB queries — which means:
+- The CPU spends minimal time per request
+- High throughput is possible for lightweight APIs like this
+
+### Final Summary
+
+| Concept | Clarification |
+|---------|---------------|
+| HTTP ≠ TCP | HTTP is built on top of TCP. Always uses TCP, even for simple APIs |
+| Event loop always runs | It's responsible for socket I/O, not just async tasks |
+| Your synchronous code runs inside one of the event loop ticks | It's called from a callback queued when a request is received |
+| Even `res.send()` involves event loop | Because socket writing is async at the OS level, though it's abstracted from you |
+
+
 # Node.js Core Concepts: EventEmitter and Worker Threads
 
 ## 🔹 Understanding EventEmitter in Node.js
