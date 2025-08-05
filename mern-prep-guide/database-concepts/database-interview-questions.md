@@ -826,4 +826,149 @@ TRUNCATE TABLE users;
 
 
 
+# PostgreSQL ALTER TABLE and Metadata Storage Guide(let suppose i have to add a column in a table which has 10 millions row  in sql what would be the difference if i run alter table set age or alter table set age default value 24)
 
+## Adding Columns to Large Tables (10M+ rows)
+
+### 1. `ALTER TABLE ADD age INT;`
+
+**Effect:** Adds the column `age` with `NULL` as the default for existing rows.
+
+**Performance:** ⚡ Very fast, even on large tables
+- Metadata-only operation in PostgreSQL
+- No data rewrite occurs
+- Instantaneous regardless of table size
+
+### 2. `ALTER TABLE ADD age INT DEFAULT 24;`
+
+There are two scenarios depending on whether `NOT NULL` is specified:
+
+#### Case A: Just Default (No NOT NULL)
+```sql
+ALTER TABLE my_table ADD age INT DEFAULT 24;
+```
+- **Effect:** New column added, default is 24 for new inserts, but existing rows still have `NULL`
+- **Performance:** ⚡ Still fast — no data rewrite needed
+- **Existing rows:** Still `NULL` unless `NOT NULL` is also added
+
+#### Case B: Default + NOT NULL
+```sql
+ALTER TABLE my_table ADD age INT DEFAULT 24 NOT NULL;
+```
+- **Effect:** Column added, all existing 10 million rows will be physically updated to store 24
+- **Performance:** 🐌 Slow and heavy — table rewrite required
+- **Duration:** Can take minutes to hours depending on disk speed, indexing, constraints, etc.
+
+## Summary Table
+
+| Command | Existing Rows Value | Performance on 10M rows |
+|---------|-------------------|------------------------|
+| `ADD age INT` | `NULL` | ⚡ Fast (metadata-only) |
+| `ADD age INT DEFAULT 24` | `NULL` | ⚡ Fast |
+| `ADD age INT DEFAULT 24 NOT NULL` | 24 | 🐌 Slow (full table rewrite) |
+
+## How PostgreSQL Handles These Operations Internally
+
+### Metadata-Only Changes
+- PostgreSQL does **not** rewrite the table
+- Updates only internal system catalogs (PostgreSQL's internal bookkeeping)
+- Does not touch or scan the actual data rows (called tuples)
+- Very fast, even on large tables
+
+### Internal Process for Each Case
+
+#### 1. `ADD age INT` (Metadata-only)
+- Adds new column entry in `pg_attribute` system catalog
+- Sets `attmissingval = NULL` for the column
+- Leaves actual row data unchanged
+- Any read from the `age` column returns `NULL` for existing rows
+
+#### 2. `ADD age INT DEFAULT 24` (Metadata-only)
+- Still a metadata-only operation in PostgreSQL 11+
+- Default value stored in `pg_attrdef`
+- Physical data is not modified for existing rows
+- When queried, PostgreSQL returns `NULL` for existing rows
+- For new inserts, PostgreSQL injects 24 as default at runtime
+
+#### 3. `ADD age INT DEFAULT 24 NOT NULL` (Table Rewrite)
+- PostgreSQL must physically update every row to store the default value 24 on disk
+- Rewrites the entire table using a heap rewrite
+- Updates visibility maps and all tuples
+- High I/O, CPU, and WAL (Write Ahead Log) activity
+- Can lock the table for extended periods
+
+## PostgreSQL System Catalogs (Metadata Storage)
+
+### What are System Catalogs?
+System catalogs are special tables that store metadata about your database structure. They're regular PostgreSQL tables that are managed internally.
+
+### Important System Catalog Tables
+
+| Table | Purpose |
+|-------|---------|
+| `pg_class` | Info about tables and indexes |
+| `pg_attribute` | Info about columns |
+| `pg_type` | Info about data types |
+| `pg_namespace` | Info about schemas |
+| `pg_constraint` | Info about constraints |
+| `pg_index` | Info about indexes |
+| `pg_attrdef` | Default values for columns |
+
+### Querying System Catalogs
+
+Check column information:
+```sql
+SELECT attname, atttypid::regtype AS type, attnotnull, atthasdef
+FROM pg_attribute
+WHERE attrelid = 'my_table'::regclass AND attnum > 0;
+```
+
+Check default values:
+```sql
+SELECT * FROM pg_attrdef WHERE adrelid = 'my_table'::regclass;
+```
+
+### Physical Storage Location
+
+System catalogs are stored on disk in the PostgreSQL data directory:
+- Usually at: `/var/lib/postgresql/<version>/main/base/`
+- Each database has a numeric ID
+- Each table (including catalog tables) is a separate file
+
+Find file locations:
+```sql
+SELECT relname, relfilenode FROM pg_class WHERE relname = 'pg_attribute';
+```
+
+## Best Practice for Large Tables
+
+To avoid downtime when adding columns with default values to large tables:
+
+1. **Add the column first:**
+```sql
+ALTER TABLE my_table ADD age INT;
+```
+
+2. **Batch update in chunks:**
+```sql
+UPDATE my_table SET age = 24 WHERE age IS NULL LIMIT 100000;
+-- Repeat in batches or use a script
+```
+
+3. **Add NOT NULL constraint if needed:**
+```sql
+ALTER TABLE my_table ALTER COLUMN age SET NOT NULL;
+```
+
+This staged approach minimizes locking and performance issues.
+
+## Key Terms
+
+| Term | Meaning |
+|------|---------|
+| **Metadata** | Info about the structure of tables, not the actual data |
+| **Metadata-only** | Changes that just update catalogs like `pg_attribute`, not data |
+| **pg_attribute** | System catalog that stores metadata about each column in every table |
+| **atthasdef** | True if a column has a default value |
+| **attnotnull** | True if a column has a NOT NULL constraint |
+| **System Catalogs** | Special tables that store database structure information |

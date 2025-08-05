@@ -53,7 +53,7 @@ console.log(preorderTraversal(rootPre)); // Output: [1, 2, 3]
 // 145 Binary Tree Postorder Traversal
 
 function postorderTraversal(root) {
-    if (!root) return [];
+    if  (!root) return [];
     return [...postorderTraversal(root.left), ...postorderTraversal(root.right), root.val];
 }
 
@@ -76,7 +76,7 @@ function validate(node, min, max) {
     if (node.val <= min || node.val >= max) return false;
 
     return validate(node.left, min, node.val) &&
-        validate(node.right, node.val, max);
+        validate(node.right, node.val, max); 
 }
 
 // Build tree: [2, 1, 3]
@@ -309,3 +309,84 @@ function sortedArrayToBST(nums) {
 const nums = [-10, -3, 0, 5, 9];
 const bstRoot = sortedArrayToBST(nums);
 console.log(bstRoot); // Output: TreeNode representing the balanced BST
+
+// *********************************************************************
+
+//Find a Pair with a Given Sum in BST
+
+/*
+Given a Binary Search Tree (BST) and a target sum, your task is to determine if there exists a pair of nodes in the BST such that the sum of their values equals the target.
+
+Input:
+The root node of a BST.
+
+An integer target representing the desired sum.
+
+Output:
+Return true if such a pair exists.
+
+Return false otherwise.
+
+Example:
+
+        10
+       /  \
+      5   15
+         /  \
+        11   20
+Target = 16 → Output: true (because 5 + 11 = 16)
+
+Target = 28 → Output: true (because 8 + 20 = 28)
+
+Target = 40 → Output: false (no such pair) */
+
+
+// Build tree: [10, 5, 15, null, null, 11, 20]
+const rootPairSum = new TreeNode(10,
+    new TreeNode(5, null, null),
+    new TreeNode(15, new TreeNode(11), new TreeNode(20))
+);  
+
+// using traversal and hashmap to find pair with sum in BST
+function rangeSumBSTfindPairWithSumInBST(root, target) {
+    let hm = new Map();
+
+    function traverse(root) {
+        if (!root) return false;
+        
+        const remaining = target - root.val;
+        if (hm.has(remaining)) {
+            return true
+        }
+        hm.set(root.val, true)
+        
+        return traverse(root.left) || traverse(root.right)
+    }
+    
+    return traverse(root)
+
+}
+
+// using stack to find pair with sum in BST
+function rangeSumBSTfindPairWithSumInBST(root, target) {
+    if(!root) return false;
+    const stack = [root]
+    let hs = new Set();
+    
+    while(stack.length > 0) {
+        const node = stack.pop()
+        const remaining = target - node.val
+        if(hs.has(remaining)) {
+            return true
+        }
+        
+        hs.add(node.val, true)
+        
+        if (node.left) stack.push(node.left)
+        if (node.right) stack.push(node.right)
+    }
+    return false;
+}
+
+
+console.log(rangeSumBSTfindPairWithSumInBST(rootPairSum, 16)); 

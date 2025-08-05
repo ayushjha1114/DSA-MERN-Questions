@@ -107,6 +107,30 @@ function sum3(arr) {
 
 // 1423. Maximum Points You Can Obtain from Cards
 
+/*
+🔶 Problem Summary:
+You are given:
+
+An integer array cardPoints, where each card has some points.
+
+An integer k — you can pick k cards total, but only from the start or end of the array.
+
+🧩 Goal:
+Pick exactly k cards (from either end) such that the total points is maximized.
+
+🔍 Example:
+js
+Copy
+Edit
+cardPoints = [1, 2, 3, 4, 5, 6, 1], k = 3
+
+// Choose 1 card from left and 2 cards from right: 1 + 6 + 1 = 8
+// Or 2 from left and 1 from right: 1 + 2 + 1 = 4
+// Or 3 from right: 6 + 1 + 5 = 12 (best)
+
+Output: 12 
+*/
+
 var maxScore = function (cardPoints, k) {
    let maxLen = 0, lsum = 0, rsum = 0, right = cardPoints.length - 1;
 
