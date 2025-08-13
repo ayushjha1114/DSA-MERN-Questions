@@ -467,6 +467,60 @@ resolve 1
 ```
 
 
+You want to implement a function that allows flexible currying and argument grouping, so that all of the following calls:
+
+```js
+b(1)(2, 3)
+b(1, 2, 3)
+b(1, 2)(3)
+```
+
+will ultimately invoke the callback `cb(x, y, z)` with the same arguments.
+
+---
+
+## Solution
+
+```js
+const a = (cb) => {
+  const requiredArgs = 3;
+
+  const collectArgs = (...argsSoFar) => {
+    return (...newArgs) => {
+      const allArgs = [...argsSoFar, ...newArgs];
+      if (allArgs.length >= requiredArgs) {
+        cb(...allArgs.slice(0, requiredArgs));
+      } else {
+        return collectArgs(...allArgs); // keep collecting
+      }
+    };
+  };
+
+  return collectArgs();
+};
+
+// Usage
+const cb = (x, y, z) => {
+  console.log('it is callbacl', x, y, z);
+};
+
+const b = a(cb);
+
+b(1)(2, 3);      // it is callbacl 1 2 3
+b(1, 2, 3);      // it is callbacl 1 2 3
+b(1, 2)(3);      // it is callbacl 1 2 3
+```
+
+---
+
+### How it works
+
+- The outer function `a(cb)` sets up a closure to collect arguments.
+- `collectArgs(...argsSoFar)` keeps accumulating arguments until we have 3.
+- Once 3 or more arguments are collected, it calls the callback with only the first 3.
+- If not enough arguments yet, it returns a new curried function expecting more.
+
+
 
 
 

@@ -1,3 +1,130 @@
+# React Virtual DOM Tree Diff Algorithm
+
+React uses a tree diffing algorithm in its Virtual DOM to efficiently determine the minimum number of changes needed to update the real DOM. This process is called **reconciliation**.
+
+---
+
+## 🧠 What is the Tree Diff Algorithm?
+
+React’s tree diff algorithm compares two trees:
+
+- **Previous Virtual DOM tree** (before update)
+- **New Virtual DOM tree** (after update)
+
+It then:
+
+1. Figures out what’s changed
+2. Generates a patch
+3. Applies the patch to the real DOM
+
+> ⚡ **Note:** React's diff algorithm is optimized with heuristics to reduce time complexity. It is not a generic tree diff (which is O(n³)).
+
+---
+
+## 🎯 Heuristics Used by React
+
+React makes three key assumptions to improve performance:
+
+1. **Different element types produce different trees.**  
+  Example: `<div>` vs `<span>` → treat as completely new subtree.
+
+2. **Keys hint at stability in lists.**  
+  Keys are used to track moved or updated elements.
+
+3. **Component re-rendering is isolated.**  
+  If a component doesn’t change, React doesn’t re-render its subtree.
+
+---
+
+## 📦 Tree Diff Example
+
+**Previous Virtual DOM Tree:**
+```jsx
+<ul>
+  <li key="A">Apple</li>
+  <li key="B">Banana</li>
+  <li key="C">Cherry</li>
+</ul>
+```
+
+**Updated Virtual DOM Tree:**
+```jsx
+<ul>
+  <li key="B">Banana</li>
+  <li key="C">Cherry</li>
+  <li key="D">Date</li>
+</ul>
+```
+
+**React’s Diff Output:**
+- `<li key="A">` is **removed**
+- `<li key="D">` is **added**
+- `<li key="B">` and `<li key="C">` are **reused (moved)**
+
+React uses the `key` attribute to match list items between updates.  
+Without keys, React uses index-based diffing, which can cause performance issues and bugs in dynamic lists.
+
+---
+
+## 🌳 Virtual DOM Tree Structure
+
+```
+ul
+├── li (key="A") - "Apple"
+├── li (key="B") - "Banana"
+└── li (key="C") - "Cherry"
+```
+
+Each `<li>` is a child node of the `<ul>` parent. React builds this tree internally, attaching properties like:
+
+- **Element type** (e.g., `li`)
+- **Props** (like `key`)
+- **Children** (text nodes or nested elements)
+
+---
+
+## 🔎 Detailed Representation (React-style)
+
+```json
+{
+  "type": "ul",
+  "props": {},
+  "children": [
+   {
+    "type": "li",
+    "key": "A",
+    "props": { "children": "Apple" }
+   },
+   {
+    "type": "li",
+    "key": "B",
+    "props": { "children": "Banana" }
+   },
+   {
+    "type": "li",
+    "key": "C",
+    "props": { "children": "Cherry" }
+   }
+  ]
+}
+```
+Each node in the virtual DOM tree is a plain JavaScript object representing a DOM element.
+
+---
+
+## ⏱️ Time Complexity
+
+React’s optimized diffing algorithm has:
+
+- **O(n) time complexity (linear)**, where _n_ = number of nodes in the tree
+
+This is possible because:
+
+- It avoids comparing subtrees if the node types differ
+- It compares only siblings (not arbitrary nodes across the tree)
+
+---
+
 # React's Internal Architecture: Before vs After v18
 
 ## 🧠 React < 18 (Legacy / Synchronous)
