@@ -238,3 +238,133 @@ export default function App() {
 | **Behavior** | Executes periodically | Waits for pause in events |
 
 This implementation provides a robust throttling mechanism that can be easily integrated into any React application for performance optimization.
+
+
+## 🔹 What is a Pure Component?
+
+A **Pure Component** in React is a component that implements a shallow comparison on props and state in `shouldComponentUpdate`.  
+It re-renders **only if** props or state have actually changed (by shallow comparison).
+
+**How to use:**
+- **Class Components:** Extend `React.PureComponent` instead of `React.Component`.
+- **Functional Components:** Wrap with `React.memo`.
+
+---
+
+## 🔹 Example: Class Component
+
+**Normal Component:**
+```jsx
+import React, { Component } from "react";
+
+class User extends Component {
+    render() {
+        console.log("User rendered");
+        return <h2>{this.props.name}</h2>;
+    }
+}
+
+export default User;
+```
+_Re-renders every time parent re-renders, even if `props.name` didn’t change._
+
+**Pure Component:**
+```jsx
+import React, { PureComponent } from "react";
+
+class User extends PureComponent {
+    render() {
+        console.log("User rendered");
+        return <h2>{this.props.name}</h2>;
+    }
+}
+
+export default User;
+```
+_Now, `User` will not re-render if the `name` prop is the same (shallow compare)._
+
+---
+
+## 🔹 Example: Functional Component
+
+**Normal Functional Component:**
+```jsx
+function User({ name }) {
+    console.log("User rendered");
+    return <h2>{name}</h2>;
+}
+
+export default User;
+```
+
+**Pure (Memoized) Functional Component:**
+```jsx
+import React from "react";
+
+const User = React.memo(function User({ name }) {
+    console.log("User rendered");
+    return <h2>{name}</h2>;
+});
+
+export default User;
+```
+_React will skip re-rendering if `name` didn’t change._
+
+---
+
+## 🔹 Real Use Cases of Pure Components
+
+- **Performance Optimization:** Avoid unnecessary re-renders in large apps, especially when passing props down many levels.
+    - _Example:_ In a chat app, you don’t want every message component to re-render just because the parent refreshed.
+- **Static Content:** For components that rarely change (logo, navbar, footer).
+- **Lists & Tables:** Rendering hundreds/thousands of rows—PureComponent ensures only updated rows re-render.
+- **Prevent Expensive Computations:** Saves work if rendering involves heavy calculations or DOM operations.
+
+---
+
+## 🔹 Shallow Comparison Caveat ⚠️
+
+`PureComponent` only does a **shallow compare** of props/state.
+
+```js
+const user1 = { name: "Ayush" };
+const user2 = { name: "Ayush" };
+
+user1 !== user2 // true (different object references)
+```
+
+If you pass objects/arrays as props and mutate them incorrectly, PureComponent will still re-render.
+
+**✅ Correct way:**
+```js
+setUser(prev => ({ ...prev, name: "Ayush" })); // new object
+```
+
+**❌ Wrong way:**
+```js
+user.name = "Ayush"; 
+setUser(user); // same reference, PureComponent might not detect change
+```
+
+---
+
+## 🔹 Converting Any Component into Pure Component
+
+- **Class Component:** Change `extends Component` → `extends PureComponent`.
+    ```jsx
+    class MyComponent extends React.PureComponent { ... }
+    ```
+- **Functional Component:** Wrap with `React.memo`.
+    ```jsx
+    export default React.memo(MyComponent);
+    ```
+
+---
+
+## ✅ Summary
+
+- A PureComponent avoids unnecessary re-renders by doing a shallow comparison of props/state.
+- Use it for performance optimization, especially in big UIs (lists, dashboards, chat apps).
+- **Class:** use `React.PureComponent`.
+- **Function:** use `React.memo`.
+- Be careful with objects/arrays as props—always update immutably.

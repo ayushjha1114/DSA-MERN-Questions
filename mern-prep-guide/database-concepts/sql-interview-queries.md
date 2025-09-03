@@ -791,3 +791,43 @@ GROUP BY player_id
 ORDER BY player_id;
 ```
 
+### Delete a Record from a Table Without a Unique Identifier
+
+This is a classic SQL problem: deleting a row from a table that has **no primary key**, **no unique column**, and possibly **duplicate rows**.
+
+#### Example Table
+
+```sql
+CREATE TABLE employees (
+    name VARCHAR(50),
+    department VARCHAR(50),
+    salary INT
+);
+```
+
+**Sample Data:**
+
+| name  | department | salary |
+|-------|------------|--------|
+| John  | Sales      | 5000   |
+| John  | Sales      | 5000   | <!-- duplicate -->
+| Alice | HR         | 6000   |
+
+Here, there’s no unique column to identify a single row (both "John | Sales | 5000" look identical).
+
+---
+
+### How to Delete a Record Without a Unique Identifier
+
+#### 1. Use `LIMIT` (MySQL, PostgreSQL)
+
+If you want to delete just **one** of the duplicate rows:
+
+```sql
+DELETE FROM employees
+WHERE name = 'John' AND department = 'Sales' AND salary = 5000
+LIMIT 1;
+```
+
+This deletes only **one** matching row.  
+Useful when duplicates exist and you want to remove just one.
