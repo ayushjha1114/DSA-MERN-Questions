@@ -831,3 +831,143 @@ LIMIT 1;
 
 This deletes only **one** matching row.  
 Useful when duplicates exist and you want to remove just one.
+
+
+
+
+if we have 100s records in postgresql
+and we write this query what will happens in this case
+select * from table where null = null
+ChatGPT said:
+
+Excellent question 👏 — and a subtle one that tests your deep SQL understanding (especially about how PostgreSQL handles NULL comparisons).
+
+Let’s break it down step by step — what actually happens under the hood when you run:
+
+SELECT * FROM table WHERE NULL = NULL;
+
+🧩 Step 1: Understanding the NULL Concept in SQL
+
+In SQL, NULL means “unknown” or “missing value”, not zero, not empty — truly unknown.
+So when you compare two NULLs:
+
+NULL = NULL
+
+
+the result is not TRUE, because SQL cannot say that one unknown equals another unknown.
+
+Instead, it returns UNKNOWN (neither true nor false).
+
+🧠 Step 2: How the WHERE Clause Works
+
+In a WHERE clause:
+
+Only rows for which the condition is TRUE are returned.
+
+Rows where the condition is FALSE or UNKNOWN are filtered out.
+
+So:
+
+WHERE NULL = NULL
+
+
+→ evaluates to UNKNOWN
+→ which means no row qualifies.
+
+✅ Result:
+→ PostgreSQL returns 0 rows.
+
+⚙️ Step 3: What Happens Internally
+
+Let’s assume your table table has 100 records.
+
+When you run:
+
+SELECT * FROM table WHERE NULL = NULL;
+
+
+PostgreSQL does the following:
+
+Parses the query and builds the execution plan.
+
+Evaluates the WHERE condition — NULL = NULL.
+
+Since it’s a constant expression (doesn’t depend on any row),
+PostgreSQL evaluates it once during planning, not per row.
+
+It finds that NULL = NULL is UNKNOWN.
+
+Because the WHERE condition is never true, it knows no row can match.
+
+Therefore, PostgreSQL does not even scan the table.
+
+✅ Optimization: PostgreSQL performs constant folding —
+it simplifies the query before execution.
+
+So internally, PostgreSQL rewrites it as:
+
+SELECT * FROM table WHERE FALSE;
+
+
+Hence, it doesn’t read 100 rows — it directly returns an empty result set.
+
+🧮 Step 4: Query Plan Proof
+
+Try:
+
+EXPLAIN SELECT * FROM table WHERE NULL = NULL;
+
+
+Output:
+
+Result  (cost=0.00..0.00 rows=0 width=0)
+  One-Time Filter: false
+
+
+Notice:
+
+One-Time Filter: false → condition evaluated once, found false.
+
+No Seq Scan → PostgreSQL never touches the table.
+
+🧩 Step 5: Correct Way to Check for NULL
+
+If you want to check for nulls, you must use the special operator IS NULL.
+
+SELECT * FROM table WHERE column IS NULL;
+
+
+or
+
+SELECT * FROM table WHERE column IS NOT NULL;
+
+❌ Wrong:
+WHERE column = NULL
+
+
+Always results in UNKNOWN → no match.
+
+✅ Right:
+WHERE column IS NULL
+
+
+Returns rows where the column is actually NULL.
+
+📘 Summary
+Concept	Explanation
+NULL = NULL	Returns UNKNOWN
+WHERE NULL = NULL	No rows returned
+Table Scan	Skipped (Postgres optimizes it out)
+Correct NULL check	IS NULL or IS NOT NULL
+Query Plan	Result (One-Time Filter: false)
+🧠 TL;DR
+
+Even if the table has millions of rows,
+this query:
+
+SELECT * FROM table WHERE NULL = NULL;
+
+
+→ never scans the table
+→ returns 0 rows instantly
+→ because NULL = NULL is always UNKNOWN (not TRUE).
