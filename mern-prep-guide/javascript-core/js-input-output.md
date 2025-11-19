@@ -558,6 +558,19 @@ function add(a) {
 console.log(add(1)(2)(3)(4)); // or use console.log(String(add(1)(2)(3)(4)));
 ```
 
+function sum(a) {
+
+  return function (b) {
+    if (!b) {
+      return a;
+    }
+    return sum(a+b); // final call with no argument
+  }
+
+}
+
+console.log(sum(10)(20)(30)()); // 60
+
 
 
 
