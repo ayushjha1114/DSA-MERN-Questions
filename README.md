@@ -37,6 +37,8 @@ Welcome! This repository contains a curated list of **DSA Questions with Solutio
 
 ### 🎨 Frontend Fundamentals
 - [Frontend Interview Questions](./mern-prep-guide/frontend-fundamentals/frontend-interview-questions.md)
+- [CSS Position Property Demo](https://ayushjha1114.github.io/DSA-MERN-Questions/mern-prep-guide/frontend-fundamentals/css-position-demo.html)
+- [CSS Interview Questions](./mern-prep-guide/frontend-fundamentals/css-interview-questions.md)
 - [PWA Backend Integration](./mern-prep-guide/frontend-fundamentals/pwa-backend-integration.md)
 - [PWA Real-World Project](./mern-prep-guide/frontend-fundamentals/pwa-realworld-project.md)
 - [React.js Internal Architecture](./mern-prep-guide/frontend-fundamentals/reactjs-internal-architecture.md)
