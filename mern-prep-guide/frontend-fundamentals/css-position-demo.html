@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Position Property - Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .demo-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .demo-section h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .demo-section p {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .demo-box {
+            width: 100%;
+            min-height: 200px;
+            background: #f5f7ff;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 20px 0;
+            font-weight: bold;
+            overflow: hidden;
+        }
+        
+        /* ===== STATIC ===== */
+        .static-demo {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+        }
+        
+        .box-static {
+            background: #2196f3;
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            position: static;
+        }
+        
+        /* ===== RELATIVE ===== */
+        .relative-demo {
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            height: 250px;
+        }
+        
+        .box-relative {
+            background: #4caf50;
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            position: relative;
+            top: 30px;
+            left: 40px;
+        }
+        
+        /* ===== ABSOLUTE ===== */
+        .absolute-demo {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            height: 250px;
+            position: relative;
+        }
+        
+        .box-absolute-parent {
+            background: #ffe0b2;
+            padding: 30px;
+            border-radius: 6px;
+            position: relative;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .box-absolute {
+            background: #ff9800;
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+        
+        /* ===== FIXED ===== */
+        .fixed-demo {
+            background: #fce4ec;
+            border: 2px solid #e91e63;
+            height: 250px;
+        }
+        
+        .box-fixed {
+            background: #e91e63;
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+            box-shadow: 0 5px 20px rgba(233, 30, 99, 0.4);
+        }
+        
+        .fixed-note {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+            padding: 10px;
+            background: #fce4ec;
+            border-left: 4px solid #e91e63;
+        }
+        
+        /* ===== STICKY ===== */
+        .sticky-demo {
+            background: #f3e5f5;
+            border: 2px solid #9c27b0;
+            height: 300px;
+            overflow-y: auto;
+        }
+        
+        .sticky-content {
+            padding: 20px;
+        }
+        
+        .box-sticky {
+            background: #9c27b0;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            margin-bottom: 20px;
+        }
+        
+        .scroll-content {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+        
+        /* ===== COMPARISON TABLE ===== */
+        .comparison-table {
+            background: #f9f9f9;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        .comparison-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .comparison-table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .comparison-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .comparison-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .check {
+            color: #4caf50;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .cross {
+            color: #f44336;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .key-concept {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            color: #1565c0;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .demo-section h2 {
+                font-size: 1.3em;
+            }
+            
+            .comparison-table {
+                font-size: 0.9em;
+            }
+            
+            .comparison-table th,
+            .comparison-table td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 CSS Position Property - Interactive Demo</h1>
+        
+        <!-- STATIC -->
+        <div class="demo-section">
+            <h2>1. Position: Static</h2>
+            <p><strong>Default behavior</strong> - Element stays in the normal document flow.</p>
+            <div class="key-concept">
+                💡 <strong>Key Point:</strong> Cannot be moved using top, left, right, or bottom properties.
+            </div>
+            <div class="demo-box static-demo">
+                <div class="box-static">I'm Static (Default)</div>
+            </div>
+            <p>✓ Respects margin and padding</p>
+            <p>✓ Other elements push it around</p>
+        </div>
+        
+        <!-- RELATIVE -->
+        <div class="demo-section">
+            <h2>2. Position: Relative</h2>
+            <p><strong>Stays in normal flow</strong> but can be offset from its original position.</p>
+            <div class="key-concept">
+                💡 <strong>Key Point:</strong> Space is still reserved for the element. It doesn't affect other elements' positioning.
+            </div>
+            <div class="demo-box relative-demo">
+                <div class="box-relative">I'm Relative (30px top, 40px left)</div>
+            </div>
+            <p>✓ Still occupies original space in document flow</p>
+            <p>✓ Can be moved using top, left, right, bottom</p>
+        </div>
+        
+        <!-- ABSOLUTE -->
+        <div class="demo-section">
+            <h2>3. Position: Absolute</h2>
+            <p><strong>Removed from normal flow</strong> - Positioned relative to nearest ancestor with relative positioning.</p>
+            <div class="key-concept">
+                💡 <strong>Key Point:</strong> If no positioned ancestor exists, it positions relative to the document root.
+            </div>
+            <div class="demo-box absolute-demo">
+                <div class="box-absolute-parent">
+                    Parent Container (position: relative)
+                    <div class="box-absolute">I'm Absolute (top: 15px, right: 15px)</div>
+                </div>
+            </div>
+            <p>✗ Doesn't occupy space in normal flow</p>
+            <p>✓ Can overlap other elements</p>
+        </div>
+        
+        <!-- FIXED -->
+        <div class="demo-section">
+            <h2>4. Position: Fixed</h2>
+            <p><strong>Fixed to viewport</strong> - Stays in place even when you scroll.</p>
+            <div class="key-concept">
+                💡 <strong>Key Point:</strong> Doesn't move relative to the page, only to the viewport (visible area).
+            </div>
+            <div class="demo-box fixed-demo">
+                <p>👉 Look at the bottom-right corner - there's a fixed element there!</p>
+            </div>
+            <div class="fixed-note">
+                ℹ️ A fixed element is currently positioned at the bottom-right of your screen. It will stay there even if you scroll.
+            </div>
+            <p>✗ Removed from normal flow</p>
+            <p>✗ Doesn't move when scrolling</p>
+            <p>✓ Great for navbars, floating buttons, notifications</p>
+        </div>
+        
+        <!-- STICKY -->
+        <div class="demo-section">
+            <h2>5. Position: Sticky</h2>
+            <p><strong>Hybrid of relative and fixed</strong> - Scrolls normally until reaching a threshold, then sticks.</p>
+            <div class="key-concept">
+                💡 <strong>Key Point:</strong> Must define top, left, right, or bottom to work. The threshold is relative to the scrolling element.
+            </div>
+            <div class="demo-box sticky-demo">
+                <div class="sticky-content">
+                    <div class="box-sticky">I'm Sticky (top: 0)</div>
+                    <div class="scroll-content">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Scroll down to see the sticky behavior!
+                    </div>
+                    <div class="scroll-content">
+                        The sticky element will stick to the top of the container once you scroll past it.
+                    </div>
+                    <div class="scroll-content">
+                        Keep scrolling... 👇
+                    </div>
+                    <div class="scroll-content">
+                        See how the sticky box stays at the top?
+                    </div>
+                    <div class="scroll-content">
+                        This is perfect for sticky headers in tables or section titles.
+                    </div>
+                    <div class="scroll-content">
+                        It will unstick when you scroll back up past its original position.
+                    </div>
+                    <div class="scroll-content">
+                        Scroll more to see it in action! ⬆️
+                    </div>
+                </div>
+            </div>
+            <p>✓ Stays in normal flow until threshold</p>
+            <p>✓ Sticks to viewport at defined offset</p>
+        </div>
+        
+        <!-- COMPARISON TABLE -->
+        <div class="demo-section">
+            <h2>📊 Comparison Table</h2>
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Position</th>
+                            <th>In Normal Flow?</th>
+                            <th>Moves with Scroll?</th>
+                            <th>Relative To</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>static</strong></td>
+                            <td><span class="check">✓ Yes</span></td>
+                            <td><span class="check">✓ Yes</span></td>
+                            <td>Normal document flow</td>
+                            <td>Default, most elements</td>
+                        </tr>
+                        <tr>
+                            <td><strong>relative</strong></td>
+                            <td><span class="check">✓ Yes</span></td>
+                            <td><span class="check">✓ Yes</span></td>
+                            <td>Its original position</td>
+                            <td>Minor adjustments, positioning context for children</td>
+                        </tr>
+                        <tr>
+                            <td><strong>absolute</strong></td>
+                            <td><span class="cross">✗ No</span></td>
+                            <td><span class="check">✓ Yes</span></td>
+                            <td>Nearest positioned ancestor</td>
+                            <td>Overlays, modals, tooltips, badges</td>
+                        </tr>
+                        <tr>
+                            <td><strong>fixed</strong></td>
+                            <td><span class="cross">✗ No</span></td>
+                            <td><span class="cross">✗ No</span></td>
+                            <td>Viewport (screen)</td>
+                            <td>Navbars, floating buttons, sticky headers</td>
+                        </tr>
+                        <tr>
+                            <td><strong>sticky</strong></td>
+                            <td><span class="check">✓ Yes (until threshold)</span></td>
+                            <td><span class="check">✓ Yes (until stuck)</span></td>
+                            <td>Nearest scrollable ancestor</td>
+                            <td>Sticky table headers, section titles</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- KEY TAKEAWAYS -->
+        <div class="demo-section">
+            <h2>🎯 Key Takeaways</h2>
+            <div class="key-concept">
+                <strong>Static vs Relative:</strong> Both stay in normal flow, but relative can be offset without affecting others.
+            </div>
+            <div class="key-concept">
+                <strong>Absolute vs Fixed:</strong> Absolute is relative to a positioned ancestor; fixed is always relative to the viewport.
+            </div>
+            <div class="key-concept">
+                <strong>Sticky:</strong> The most powerful but least supported (IE doesn't support it). Great for modern browsers.
+            </div>
+            <div class="key-concept">
+                <strong>Pro Tip:</strong> When using absolute positioning, always ensure the parent is `position: relative` (or absolute/fixed).
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fixed Box Demo -->
+    <div class="box-fixed">
+        📌 I'm Fixed!<br>
+        <span style="font-size: 0.8em;">Scroll me →</span>
+    </div>
+</body>
+</html>

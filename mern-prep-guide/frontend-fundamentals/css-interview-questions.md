@@ -8,7 +8,9 @@ CSS has five main position values:
 - **fixed**
 - **sticky**
 
-Let’s go through them one by one with examples 👇
+Let's go through them one by one with examples 👇
+
+> 📊 **View Interactive Demo:** Open [`css-position-demo.html`](./css-position-demo.html) in your browser to see live, interactive demonstrations of all CSS position values with visual examples!
 
 ---
 

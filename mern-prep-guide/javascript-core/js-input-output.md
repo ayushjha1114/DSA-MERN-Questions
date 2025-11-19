@@ -523,6 +523,40 @@ b(1, 2)(3);      // it is callbacl 1 2 3
 
 
 
+## Classic Advanced JavaScript Closure and Currying Problem
+
+You want a function such that:
+
+```js
+add(1)(2)(3)(4) // → 10
+```
+
+and it should dynamically handle any number of parameters:
+
+```js
+add(1)(2)(3)(4)(5)(6) // → 21
+```
+
+Let’s break it down and then write the final dynamic solution 👇
+
+---
+
+### ✅ Dynamic Curried Add Function
+
+Here’s a clean and dynamic implementation:
+
+```js
+function add(a) {
+    function inner(b) {
+        if (b) return add(a + b);
+        return a;
+    }
+    inner.toString = () => a;
+    return inner;
+}
+
+console.log(add(1)(2)(3)(4)); // or use console.log(String(add(1)(2)(3)(4)));
+```
 
 
 
